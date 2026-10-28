@@ -1,31 +1,28 @@
-<section id="conclusion" data-transition="fade" style="background:#14213D;color:#FBFBF8;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
-<h2 style="font-family:'Source Serif 4', Georgia, serif;font-size:72px;font-weight:400;line-height:1.1;color:#FBFBF8">Conclusions</h2>
+<section id="conclusion" data-transition="fade" style="background:#14213D;color:#FBFBF8;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:48px">
+<h2 style="font-family:'Source Serif 4', Georgia, serif;font-size:76px;font-weight:400;line-height:1.1;color:#FBFBF8">Conclusions</h2>
 <div style="display:flex;gap:32px">
-<div style="flex:1;display:flex;flex-direction:column;gap:18px">
+<div style="flex:1;display:flex;flex-direction:column;gap:20px">
 <p style="font-size:26px;font-weight:600;color:#7FA7F5;letter-spacing:2px;text-transform:uppercase">What we showed</p>
-<ul style="font-size:31px;line-height:1.55;color:#FBFBF8;padding:0 0 0 36px">
-<li>An LDS is a continuous HMM — filter, smoother and EM all carried over from Unit 4 unchanged in spirit.</li>
-<li>Modelling wind as a correlated hidden state keeps the system <b>linear</b>, so the Kalman filter stays exactly optimal.</li>
-<li>Fusing three partial, multi-rate sensors beat dead reckoning by <b style="color:#F0B46A">238×</b>.</li>
-<li>We recovered a quantity <b>no sensor measures</b> to 2.14 m/s.</li>
+<ul style="font-size:35px;line-height:1.55;color:#FBFBF8;padding:0 0 0 36px">
+<li>Unit 4&rsquo;s algorithms work on continuous states.</li>
+<li>Treating wind as an answer keeps it <b>linear</b>.</li>
+<li>Three weak sensors beat one, by <b style="color:#F0B46A">238&times;</b>.</li>
+<li>We found what <b>nothing measures</b>.</li>
 </ul>
 </div>
-<div style="flex:1;display:flex;flex-direction:column;gap:18px">
-<p style="font-size:26px;font-weight:600;color:#F0B46A;letter-spacing:2px;text-transform:uppercase">Limitations, stated plainly</p>
-<ul style="font-size:31px;line-height:1.55;color:#BFD8D5;padding:0 0 0 36px">
-<li>Linear drag and small-angle flight; aggressive manoeuvres would need an EKF or UKF.</li>
-<li>The IMU channel carries thrust only — a real accelerometer also senses drag.</li>
-<li>Wind is treated as spatially uniform across the airframe.</li>
-<li>IMU noise and gust intensity are both measured; the trajectory itself is simulated.</li>
+<div style="flex:1;display:flex;flex-direction:column;gap:20px">
+<p style="font-size:26px;font-weight:600;color:#F0B46A;letter-spacing:2px;text-transform:uppercase">Limits</p>
+<ul style="font-size:35px;line-height:1.55;color:#BFD8D5;padding:0 0 0 36px">
+<li>Gentle flight only. Aerobatics need an EKF.</li>
+<li>The IMU reports thrust, not drag.</li>
+<li>Wind is the same everywhere on the drone.</li>
+<li>The trajectory is simulated.</li>
 </ul>
 </div>
 </div>
-<div style="background:#1C2E54;padding:36px 44px;border-radius:16px;display:flex;flex-direction:column;gap:10px">
-<p style="font-size:33px;line-height:1.45;color:#FBFBF8">The lesson we would keep: <b>accuracy and honesty are different properties.</b> A filter can report a small error and still be badly wrong about its own confidence — and only a consistency test will tell you.</p>
+<div style="background:#1C2E54;padding:48px;border-radius:16px">
+<p style="font-size:40px;line-height:1.45;color:#FBFBF8"><b>Being accurate and knowing it are different things.</b><br>Only a consistency test tells you which you have.</p>
 </div>
-<div style="display:flex;justify-content:space-between;align-items:flex-end">
-<p style="font-size:28px;color:#BFD8D5;line-height:1.5">Next: estimate drag coefficient k online · spatially varying gust field · fly the estimator on a real log end-to-end</p>
-<p style="font-size:26px;color:#7FA7F5;text-align:right;line-height:1.5"><b style="color:#FBFBF8">Team Cash Guard</b><br>Anbu · Roopesh · Charith · Rupesh</p>
-</div>
-<aside>To close. We set out to estimate a drone's position and velocity from three inadequate sensors in turbulent wind, and we did it with the Unit 4 toolkit moved from discrete to continuous states. The headline numbers are a 238 times improvement over dead reckoning and the recovery of wind, which nothing on the aircraft measures. We are explicit about the limitations: linear drag, small angles, a simplified IMU channel, uniform wind, and a simulated trajectory driven by real measured IMU noise and real measured gusts. If we had to keep one lesson it is that accuracy and honesty are different properties of an estimator — our filter had an excellent RMSE while being significantly over-confident, and only the NIS consistency test revealed it. Thank you — happy to take questions.</aside>
+<p style="position:absolute;left:128px;bottom:64px;font-size:26px;color:#7FA7F5"><b style="color:#FBFBF8">Team Cash Guard</b> &nbsp;&middot;&nbsp; Anbu &middot; Roopesh &middot; Charith &middot; Rupesh</p>
+<aside>To close. We set out to estimate a drone's position and velocity from three inadequate sensors in turbulent wind, and we did it with the Unit 4 toolkit moved from discrete states to continuous ones. The headline numbers are a 238 times improvement over dead reckoning and the recovery of wind, which nothing on the aircraft measures. We are explicit about the limits: linear drag and gentle flight, a simplified IMU channel, uniform wind, and a simulated trajectory driven by real measured noise and real measured gusts. If we had to keep one lesson it is that being accurate and knowing you are accurate are different properties. Our filter had an excellent error while being badly over-confident, and only the NIS consistency test revealed it. Thank you - happy to take questions.</aside>
 </section>

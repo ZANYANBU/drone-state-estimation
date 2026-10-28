@@ -1,24 +1,20 @@
-<section id="smoother" data-transition="fade" style="background:#F2F3F0;color:#14213D;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
-<h2 style="font-family:'Source Serif 4', Georgia, serif;font-size:72px;font-weight:400;line-height:1.1">Smoothing and learning the noise</h2>
-<div style="display:flex;gap:36px">
-<div style="flex:1;display:flex;flex-direction:column;gap:18px">
-<div style="background:#FFFFFF;padding:36px 40px;border:1px solid #E3E6E4;border-radius:16px;display:flex;flex-direction:column;gap:12px">
-<p style="font-size:26px;font-weight:600;color:#2563EB;letter-spacing:2px;text-transform:uppercase">Backward pass = β</p>
-<h3 style="font-size:40px;font-weight:600">RTS smoother</h3>
-<p style="font-size:29px;line-height:1.45;color:#4A5568">The filter at time t knows only the past. After landing we know the <b>whole flight</b>, so we sweep backwards and let later evidence correct earlier estimates — exactly γ<sub>t</sub> ∝ α<sub>t</sub> β<sub>t</sub>.</p>
-<p style="font-size:30px;line-height:1.45;color:#14213D;background:#F2F3F0;padding:20px 24px;border-radius:10px">Velocity error fell from <b>0.683</b> to <b style="color:#2563EB">0.200 m/s</b> — a 3.4× gain for one extra pass.</p>
+<section id="smoother" data-transition="fade" style="background:#F2F3F0;color:#14213D;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:44px">
+<h2 style="font-family:'Source Serif 4', Georgia, serif;font-size:76px;font-weight:400;line-height:1.1">Two more passes, two more wins</h2>
+<div style="display:flex;gap:32px">
+<div style="flex:1;background:#FFFFFF;padding:48px;border:1px solid #E3E6E4;border-radius:16px;display:flex;flex-direction:column;gap:20px">
+<h3 style="font-size:46px;font-weight:600;color:#2563EB">Smoother</h3>
+<p style="font-size:36px;line-height:1.4;color:#14213D">After landing we know the whole flight.</p>
+<p style="font-size:34px;line-height:1.4;color:#4A5568">So go <b>backwards</b> and fix the early guesses.</p>
+<p style="font-size:34px;line-height:1.4;color:#14213D;background:#F2F3F0;padding:22px 26px;border-radius:10px">Velocity error <b style="color:#2563EB">3.4&times; better</b>.</p>
+</div>
+<div style="flex:1;background:#FFFFFF;padding:48px;border:1px solid #E3E6E4;border-radius:16px;display:flex;flex-direction:column;gap:20px">
+<h3 style="font-size:46px;font-weight:600;color:#B45309">EM</h3>
+<p style="font-size:36px;line-height:1.4;color:#14213D">Nobody told us how noisy the sensors are.</p>
+<p style="font-size:34px;line-height:1.4;color:#4A5568">Guess, smooth, re-measure, repeat.</p>
+<p style="font-size:34px;line-height:1.4;color:#14213D;background:#F2F3F0;padding:22px 26px;border-radius:10px">Started <b>3&times; wrong</b> &rarr; found <b style="color:#B45309">0.593</b> vs true 0.600.</p>
 </div>
 </div>
-<div style="flex:1;display:flex;flex-direction:column;gap:18px">
-<div style="background:#FFFFFF;padding:36px 40px;border:1px solid #E3E6E4;border-radius:16px;display:flex;flex-direction:column;gap:12px">
-<p style="font-size:26px;font-weight:600;color:#B45309;letter-spacing:2px;text-transform:uppercase">Baum–Welch, continuous</p>
-<h3 style="font-size:40px;font-weight:600">EM for unknown noise</h3>
-<p style="font-size:29px;line-height:1.45;color:#4A5568"><b>E-step:</b> filter + smoother give the posterior over hidden states.<br><b>M-step:</b> each variance becomes the mean squared smoothed residual.</p>
-<p style="font-size:30px;line-height:1.45;color:#14213D;background:#F2F3F0;padding:20px 24px;border-radius:10px">Started <b>3× wrong</b>. EM recovered σ<sub>alt</sub> = <b style="color:#B45309">0.593</b> against a true 0.600, log-likelihood rising every step.</p>
-</div>
-</div>
-</div>
-<img src="/_blob/89f33348ef89ced8ffd8eeb26cda585d" alt="Left: EM log-likelihood rising monotonically over eight iterations. Right: real measured wind speed and gusts over seven days, with the gustiest hour marked." style="width:1664px;height:268px;object-fit:contain;border-radius:12px;background:#FFFFFF">
-<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#6A7179">We never told the filter how noisy the sensors were — it worked it out from the data.</p>
-<aside>Two more unit-4 algorithms, both delivering. The RTS smoother is the backward half of forward-backward. The filter is causal — at time t it only knows the past — but once the flight is over we know everything, so we sweep backwards and let later evidence improve earlier estimates. That is precisely gamma proportional to alpha times beta, and it cut our velocity error by a factor of three and a half. Then EM: we deliberately started the filter believing the sensors were three times noisier than they really are, and EM recovered the altimeter noise to within one per cent. The log-likelihood increased monotonically at every iteration, which is the theoretical guarantee of EM showing up in practice.</aside>
+<img src="/_blob/89f33348ef89ced8ffd8eeb26cda585d" alt="Left: EM log-likelihood rising at every iteration. Right: real measured wind speed and gusts over seven days, with the gustiest hour marked." style="width:1664px;height:252px;object-fit:contain;border-radius:12px;background:#FFFFFF">
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#6A7179">The filter learned its own noise from the data.</p>
+<aside>Two more unit-4 algorithms, both delivering. The RTS smoother is the backward half of forward-backward. The filter is causal - at any moment it only knows the past - but once the flight is over we know everything, so we sweep backwards and let later evidence improve earlier estimates. That is gamma proportional to alpha times beta, and it cut our velocity error by a factor of three and a half. Then EM: we deliberately started the filter believing the sensors were three times noisier than they really are, and it recovered the altimeter noise to within one per cent. The log-likelihood increased at every iteration, which is EM's theoretical guarantee showing up in practice. Worth stressing: nobody fed the filter the true noise values. It worked them out from the data alone.</aside>
 </section>

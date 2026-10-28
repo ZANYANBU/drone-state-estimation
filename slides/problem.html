@@ -1,25 +1,25 @@
-<section id="problem" data-transition="fade" style="background:#FBFBF8;color:#14213D;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:48px">
-<h2 style="font-family:'Source Serif 4', Georgia, serif;font-size:72px;font-weight:400;line-height:1.1">Three sensors, none of them enough</h2>
+<section id="problem" data-transition="fade" style="background:#FBFBF8;color:#14213D;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:56px">
+<h2 style="font-family:'Source Serif 4', Georgia, serif;font-size:76px;font-weight:400;line-height:1.1">Three sensors. None of them enough.</h2>
 <div style="display:flex;gap:32px">
-<div style="flex:1;display:flex;flex-direction:column;gap:14px;background:#FFFFFF;padding:40px;border:1px solid #E3E6E4;border-radius:16px">
-<p style="font-size:24px;font-weight:600;color:#B45309;letter-spacing:2px;text-transform:uppercase">100 Hz</p>
-<h3 style="font-size:38px;font-weight:600">IMU</h3>
-<p style="font-size:30px;line-height:1.45;color:#4A5568">Gives acceleration. Integrate it twice and small errors compound into metres within seconds.</p>
+<div style="flex:1;display:flex;flex-direction:column;gap:16px;background:#FFFFFF;padding:48px;border:1px solid #E3E6E4;border-radius:16px">
+<h3 style="font-size:46px;font-weight:600">IMU</h3>
+<p style="font-size:34px;line-height:1.4;color:#14213D">Acceleration</p>
+<p style="font-size:32px;line-height:1.4;color:#B45309">Drifts. Badly.</p>
 </div>
-<div style="flex:1;display:flex;flex-direction:column;gap:14px;background:#FFFFFF;padding:40px;border:1px solid #E3E6E4;border-radius:16px">
-<p style="font-size:24px;font-weight:600;color:#B45309;letter-spacing:2px;text-transform:uppercase">10 Hz</p>
-<h3 style="font-size:38px;font-weight:600">Altimeter</h3>
-<p style="font-size:30px;line-height:1.45;color:#4A5568">Height only, ±0.6 m of noise. Says nothing about where the drone is horizontally.</p>
+<div style="flex:1;display:flex;flex-direction:column;gap:16px;background:#FFFFFF;padding:48px;border:1px solid #E3E6E4;border-radius:16px">
+<h3 style="font-size:46px;font-weight:600">Altimeter</h3>
+<p style="font-size:34px;line-height:1.4;color:#14213D">Height only</p>
+<p style="font-size:32px;line-height:1.4;color:#B45309">Blind sideways.</p>
 </div>
-<div style="flex:1;display:flex;flex-direction:column;gap:14px;background:#FFFFFF;padding:40px;border:1px solid #E3E6E4;border-radius:16px">
-<p style="font-size:24px;font-weight:600;color:#B45309;letter-spacing:2px;text-transform:uppercase">30 Hz</p>
-<h3 style="font-size:38px;font-weight:600">Optical flow</h3>
-<p style="font-size:30px;line-height:1.45;color:#4A5568">Horizontal velocity, and it gets worse the higher you fly — fewer ground features to track.</p>
+<div style="flex:1;display:flex;flex-direction:column;gap:16px;background:#FFFFFF;padding:48px;border:1px solid #E3E6E4;border-radius:16px">
+<h3 style="font-size:46px;font-weight:600">Optical flow</h3>
+<p style="font-size:34px;line-height:1.4;color:#14213D">Sideways speed</p>
+<p style="font-size:32px;line-height:1.4;color:#B45309">Worse up high.</p>
 </div>
 </div>
-<div style="background:#14213D;padding:44px 48px;border-radius:16px;display:flex;flex-direction:column;gap:12px">
-<p style="font-size:34px;line-height:1.45;color:#FBFBF8"><b>And the wind is invisible.</b> No sensor measures it, yet it is the single biggest thing pushing the drone off course — in our data it moved the aircraft about <b style="color:#F0B46A">200 metres downwind in 60 seconds</b>.</p>
+<div style="background:#14213D;padding:48px;border-radius:16px">
+<p style="font-size:40px;line-height:1.45;color:#FBFBF8"><b>And the wind is invisible.</b> It moved our drone <b style="color:#F0B46A">103 metres</b> in sixty seconds.</p>
 </div>
-<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#6A7179">The estimator has to recover what no instrument reports.</p>
-<aside>Each sensor is individually inadequate. The IMU drifts because double integration compounds error. The altimeter only sees height. Optical flow only sees horizontal velocity, and it degrades with altitude — remember that detail, it comes back later as a bug we caught. Above all, the wind is never measured by anything, and it is the dominant disturbance. Our job is to fuse these three partial, noisy, differently-timed signals into one consistent estimate, and to recover the wind as a bonus.</aside>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#6A7179">They also disagree — and report at three different rates.</p>
+<aside>Each sensor is individually inadequate. The IMU gives acceleration, and integrating it twice turns a small bias into a huge position error — it drifted over a hundred metres in our one-minute flight. The altimeter gives height and nothing about horizontal position. Optical flow gives horizontal velocity but degrades with altitude, because there are fewer ground features to track — remember that detail, it comes back later as the error we caught. On top of all that, the wind is never measured by anything, and it is the dominant disturbance. They also run at three different rates, so they cannot simply be lined up and compared. Our job is to fuse three partial, noisy, differently-timed signals into one consistent estimate, and to recover the wind as a bonus.</aside>
 </section>

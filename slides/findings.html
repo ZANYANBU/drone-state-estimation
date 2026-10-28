@@ -1,29 +1,26 @@
-<section id="findings" data-transition="fade" style="background:#F2F3F0;color:#14213D;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:32px">
-<div style="display:flex;flex-direction:column;gap:10px">
-<p style="font-size:26px;font-weight:600;color:#2563EB;letter-spacing:3px;text-transform:uppercase">What the experiments taught us</p>
-<h2 style="font-family:'Source Serif 4', Georgia, serif;font-size:66px;font-weight:400;line-height:1.1">Three findings we did not expect</h2>
-</div>
+<section id="findings" data-transition="fade" style="background:#F2F3F0;color:#14213D;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<h2 style="font-family:'Source Serif 4', Georgia, serif;font-size:72px;font-weight:400;line-height:1.1">Three things we did not expect</h2>
 <div style="display:flex;gap:28px">
-<div style="flex:1;background:#FFFFFF;padding:34px;border:1px solid #E3E6E4;border-radius:16px;display:flex;flex-direction:column;gap:12px">
+<div style="flex:1;background:#FFFFFF;padding:40px;border:1px solid #E3E6E4;border-radius:16px;display:flex;flex-direction:column;gap:16px">
 <p style="font-size:30px;font-weight:700;color:#B45309">1</p>
-<h3 style="font-size:33px;font-weight:600;line-height:1.25">A consistency test caught a bug the error could not</h3>
-<p style="font-size:26px;line-height:1.45;color:#4A5568">Optical flow gets noisier with altitude; our filter assumed constant noise. Position error looked fine at 0.42 m — but <b>NIS was 10.15 when it should be 2</b>. The filter was accurate and still wrong about its own confidence.</p>
-<p style="font-size:26px;line-height:1.4;color:#14213D;background:#F2F3F0;padding:16px 18px;border-radius:10px">Scaling R with estimated altitude → NIS <b style="color:#2563EB">1.95</b>, RMSE unchanged.</p>
+<h3 style="font-size:38px;font-weight:600;line-height:1.2">Accurate, but lying</h3>
+<p style="font-size:31px;line-height:1.4;color:#4A5568">The error looked fine. The filter&rsquo;s own confidence was <b>5&times; too sure</b>.</p>
+<p style="font-size:30px;line-height:1.35;color:#14213D;background:#F2F3F0;padding:18px 20px;border-radius:10px">RMSE never showed it. The consistency test did.</p>
 </div>
-<div style="flex:1;background:#FFFFFF;padding:34px;border:1px solid #E3E6E4;border-radius:16px;display:flex;flex-direction:column;gap:12px">
+<div style="flex:1;background:#FFFFFF;padding:40px;border:1px solid #E3E6E4;border-radius:16px;display:flex;flex-direction:column;gap:16px">
 <p style="font-size:30px;font-weight:700;color:#B45309">2</p>
-<h3 style="font-size:33px;font-weight:600;line-height:1.25">The covariance admits what it cannot know</h3>
-<p style="font-size:26px;line-height:1.45;color:#4A5568">No sensor observes horizontal position, so σ<sub>x</sub> and σ<sub>y</sub> grow without bound while σ<sub>z</sub> stays pinned by the altimeter.</p>
-<p style="font-size:26px;line-height:1.4;color:#14213D;background:#F2F3F0;padding:16px 18px;border-radius:10px">That is <b>observability</b> visible in the mathematics — not a bug.</p>
+<h3 style="font-size:38px;font-weight:600;line-height:1.2">It admits what it cannot know</h3>
+<p style="font-size:31px;line-height:1.4;color:#4A5568">Nothing measures sideways position &mdash; so that doubt <b>grows forever</b>.</p>
+<p style="font-size:30px;line-height:1.35;color:#14213D;background:#F2F3F0;padding:18px 20px;border-radius:10px">Height stays pinned. That is honesty, not a bug.</p>
 </div>
-<div style="flex:1;background:#FFFFFF;padding:34px;border:1px solid #E3E6E4;border-radius:16px;display:flex;flex-direction:column;gap:12px">
+<div style="flex:1;background:#FFFFFF;padding:40px;border:1px solid #E3E6E4;border-radius:16px;display:flex;flex-direction:column;gap:16px">
 <p style="font-size:30px;font-weight:700;color:#B45309">3</p>
-<h3 style="font-size:33px;font-weight:600;line-height:1.25">Adding a sensor made it worse</h3>
-<p style="font-size:26px;line-height:1.45;color:#4A5568">A 2.5 m GPS <b>hurt</b> over 60 s (0.434 → 0.750 m): optical flow was already better than GPS. It only starts helping past ~300 s, once drift exceeds GPS noise.</p>
-<p style="font-size:26px;line-height:1.4;color:#14213D;background:#F2F3F0;padding:16px 18px;border-radius:10px">More sensors is <b>not</b> automatically better.</p>
+<h3 style="font-size:38px;font-weight:600;line-height:1.2">Adding GPS made it worse</h3>
+<p style="font-size:31px;line-height:1.4;color:#4A5568">For a short flight it <b>doubled</b> the error. It only helps after ~5 minutes.</p>
+<p style="font-size:30px;line-height:1.35;color:#14213D;background:#F2F3F0;padding:18px 20px;border-radius:10px">More sensors is not automatically better.</p>
 </div>
 </div>
-<img src="/_blob/007d94ad1bb6c75b1b9a8af1ca9cce97" alt="Position uncertainty over time: x and y grow steadily without bound while z stays flat and small, held down by the altimeter." style="width:1664px;height:226px;object-fit:contain;border-radius:12px;background:#FFFFFF;border:1px solid #E3E6E4">
-<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#6A7179">A filter can be accurate and still be dishonest about how accurate it is.</p>
-<aside>These three findings are what turn a textbook exercise into a real investigation. The first is the most important lesson: we validated with NEES and NIS, which check whether the filter's claimed uncertainty matches its actual error. The position error looked perfectly healthy, but NIS was five times what it should be — the filter was over-confident because we had told it the optical flow noise was constant when in reality it grows with altitude. Fixing it barely changed the RMSE but made the filter honest. If you only ever look at RMSE you would never have found this. Second, the uncertainty in x and y grows forever because nothing measures them, and the graph shows exactly that — the mathematics is telling us the truth about observability. Third, the counter-intuitive one: adding a GPS actually made things worse over a short flight, because optical flow was already more accurate than a consumer GPS. Fusion only helps when the new sensor beats what you already have.</aside>
+<img src="/_blob/007d94ad1bb6c75b1b9a8af1ca9cce97" alt="Position uncertainty over time: x and y grow steadily without bound while z stays flat and small, held down by the altimeter." style="width:1664px;height:240px;object-fit:contain;border-radius:12px;background:#FFFFFF;border:1px solid #E3E6E4">
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#6A7179">A filter can be right and still not know it.</p>
+<aside>These three findings turn a textbook exercise into a real investigation. The first is the most important. We validated with NEES and NIS, which check whether the filter's claimed uncertainty matches its actual error. The position error looked perfectly healthy at forty-three centimetres, but NIS came out at ten when it should be two - the filter was five times over-confident, because we had told it the optical flow noise was constant when in reality it grows with altitude. Scaling that noise with the estimated altitude fixed the consistency and barely moved the accuracy at all. If you only ever look at error, you never find this. Second, the uncertainty in sideways position grows forever because no sensor observes it, while height stays pinned by the altimeter - the mathematics telling us the truth about observability. Third, the counter-intuitive one: adding a GPS made things worse over a short flight, because optical flow was already more accurate than a consumer GPS. Fusion only helps when the new sensor beats what you already have.</aside>
 </section>

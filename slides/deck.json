@@ -10,6 +10,7 @@
   "bridge",
   "model",
   "kalman",
+  "why",
   "smoother",
   "realdata",
   "results",
@@ -18,8 +19,8 @@
  ],
  "sections": {
   "intro": { "description": "The estimation problem and why it belongs to Unit 4.", "start": "cover" },
-  "theory": { "description": "LDS as a continuous HMM: filter, smoother and EM.", "start": "bridge" },
-  "experiment": { "description": "Real wind, a real database, and what the numbers showed.", "start": "realdata" }
+  "theory": { "description": "The algorithm, why we chose it, and the smoother and EM that follow.", "start": "bridge" },
+  "experiment": { "description": "Real measured data, and what the numbers showed.", "start": "realdata" }
  },
  "faces": {
   "source-serif-4": {
