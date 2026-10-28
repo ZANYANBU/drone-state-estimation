@@ -1,13 +1,6 @@
-/Users/raja/Desktop/drone-kalman/_run.py:45: SyntaxWarning: invalid escape sequence '\s'
-  ax[1].set(title=f"Noise is Gaussian  ($\sigma_x$={ACC_SIGMA[0]:.3f})", xlabel="m/s$^2$")
-/Users/raja/Desktop/drone-kalman/_run.py:46: SyntaxWarning: invalid escape sequence '\s'
-  ax[2].bar("xyz", ACC_SIGMA); ax[2].set(title="Per-axis $\sigma$ feeding Q", ylabel="m/s$^2$")
-/Users/raja/Desktop/drone-kalman/_run.py:523: SyntaxWarning: invalid escape sequence '\p'
-  ax.set(title="3 — position, true vs est $\pm2\sigma$", xlabel="s", ylabel="m")
-/Users/raja/Desktop/drone-kalman/_run.py:534: SyntaxWarning: invalid escape sequence '\p'
-  ax.set(title="5 — error inside its $\pm2\sigma$ envelope", xlabel="s", ylabel="m"); ax.legend(fontsize=7)
-/Users/raja/Desktop/drone-kalman/_run.py:537: SyntaxWarning: invalid escape sequence '\s'
-  for j in range(3): ax.plot(t, sd(filt["Pf"], j), label=f"$\sigma_{L[j]}$")
+# Console output of a full run (Drone_Kalman_Unit4.ipynb).
+# Kept for reference so the numbers in README.md can be checked.
+
 ready
 downloaded 4.05 MB
   rate            248 Hz over 69 s, 17070 samples
