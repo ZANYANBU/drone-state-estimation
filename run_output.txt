@@ -1,0 +1,81 @@
+/Users/raja/Desktop/drone-kalman/_run.py:45: SyntaxWarning: invalid escape sequence '\s'
+  ax[1].set(title=f"Noise is Gaussian  ($\sigma_x$={ACC_SIGMA[0]:.3f})", xlabel="m/s$^2$")
+/Users/raja/Desktop/drone-kalman/_run.py:46: SyntaxWarning: invalid escape sequence '\s'
+  ax[2].bar("xyz", ACC_SIGMA); ax[2].set(title="Per-axis $\sigma$ feeding Q", ylabel="m/s$^2$")
+/Users/raja/Desktop/drone-kalman/_run.py:523: SyntaxWarning: invalid escape sequence '\p'
+  ax.set(title="3 — position, true vs est $\pm2\sigma$", xlabel="s", ylabel="m")
+/Users/raja/Desktop/drone-kalman/_run.py:534: SyntaxWarning: invalid escape sequence '\p'
+  ax.set(title="5 — error inside its $\pm2\sigma$ envelope", xlabel="s", ylabel="m"); ax.legend(fontsize=7)
+/Users/raja/Desktop/drone-kalman/_run.py:537: SyntaxWarning: invalid escape sequence '\s'
+  for j in range(3): ax.plot(t, sd(filt["Pf"], j), label=f"$\sigma_{L[j]}$")
+ready
+downloaded 4.05 MB
+  rate            248 Hz over 69 s, 17070 samples
+  accel sigma     [0.293 0.411 0.162] m/s^2
+  gyro  sigma     [0.278 0.117 0.156] rad/s
+  accel bias      [ 1.091 -0.442  0.189] m/s^2   <- real, uncorrected
+  sigma_imu -> Q  0.289 m/s^2   (MEASURED, not assumed)
+  velocity random walk 0.01835 (m/s^2)/sqrt(Hz)
+rows per table:
+  runs                    1
+  imu_calibration         1
+  imu_raw              4268
+  ground_truth         6000
+  sensor_readings      8660
+  estimates               0
+
+sensor mix, straight from SQL:
+  imu              6000   mean sigma None
+  optical_flow     2000   mean sigma 0.2037
+  altimeter         600   mean sigma 0.6
+  gps                60   mean sigma 2.5
+accuracy, computed by SQL JOIN against ground_truth:
+
+  method                      pos RMSE (m)  vel RMSE (m/s)
+  dead_reckon                       53.439           2.380
+  filter                             0.346           0.458
+  smoother                           0.238           0.146
+
+  improvement: 155x
+FINDING 1 — NIS catches a model mismatch that RMSE hides
+
+  R for optical flow        NIS (want 2)    pos RMSE
+  constant (wrong)                  5.61       0.346
+  altitude-scaled                   1.95       0.346
+
+  Accuracy barely moves - but the wrong filter reported uncertainty ~3x too small.
+
+  NEES 4.15 (want 6)   NIS_alt 0.97 (want 1)   NIS_flow 1.95 (want 2)
+  wind RMSE 1.224 m/s  <- never measured by any sensor
+   EM  0:  loglik=     -1535.2   sigma_alt=0.687 (true 0.600)   sigma_flow=0.215 (true 0.120)
+   EM  1:  loglik=      -325.1   sigma_alt=0.599 (true 0.600)   sigma_flow=0.206 (true 0.120)
+   EM  2:  loglik=      -306.4   sigma_alt=0.594 (true 0.600)   sigma_flow=0.205 (true 0.120)
+   EM  3:  loglik=      -306.3   sigma_alt=0.593 (true 0.600)   sigma_flow=0.205 (true 0.120)
+   EM  4:  loglik=      -306.3   sigma_alt=0.593 (true 0.600)   sigma_flow=0.205 (true 0.120)
+   EM  5:  loglik=      -306.3   sigma_alt=0.593 (true 0.600)   sigma_flow=0.205 (true 0.120)
+   EM  6:  loglik=      -306.3   sigma_alt=0.593 (true 0.600)   sigma_flow=0.205 (true 0.120)
+   EM  7:  loglik=      -306.3   sigma_alt=0.593 (true 0.600)   sigma_flow=0.205 (true 0.120)
+
+  recovered sigma_alt = 0.593  (true 0.600)
+  log-likelihood -1535.2 -> -306.3, monotonic: True
+  flight        no GPS   with GPS   verdict
+    60 s       0.346 m     0.706 m   GPS HURTS (+104%)
+   120 s       0.350 m     0.536 m   GPS HURTS (+53%)
+   300 s       0.979 m     0.561 m   GPS helps  (-43%)
+   600 s       1.366 m     0.693 m   GPS helps  (-49%)
+runs table:
+  run_id         1
+  created        2026-10-28 09:34:47
+  pos_rmse_dr    53.4393
+  pos_rmse_kf    0.3455
+  pos_rmse_rts   0.2377
+  vel_rmse_kf    0.4576
+  wind_rmse_kf   1.2238
+  loglik         -74.3342
+  nees           4.1482
+  nis_alt        0.9748
+  nis_flow       1.9511
+  notes          IMU noise measured from a real PX4 log
+
+  drone.db       5052 KB
+  drone_db.sql   8096 KB  (portable dump)

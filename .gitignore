@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+*.ulg
+drone.db
+drone.db-wal
+drone.db-shm
+drone_db.sql
+.ipynb_checkpoints/
