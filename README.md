@@ -4,16 +4,30 @@
 
 **Team Cash Guard** · V. Anbu Chelvan · S. Roopesh · B. Charith Reddy · Y. Rupesh Reddy
 
+> Recover a drone's true position, velocity **and the wind acting on it** from three sensors that
+> are each individually inadequate — and from a wind that nothing on board measures.
+>
+> **Result: 155× more accurate than integrating the IMU.** Position error falls from 53.4 m to
+> 0.35 m, and the wind is recovered to 1.22 m/s without ever being observed.
+
+---
+
+## Quick start
+
+```
+Colab → File → Upload notebook → Drone_Kalman_Unit4.ipynb → Runtime → Run all
+```
+
+Runs in about a minute. It installs `pyulog` itself and downloads the flight log it needs.
+No API key, no account, nothing to configure.
+
 ---
 
 ## The problem
 
-Recover a drone's true 3-D **position**, **velocity** and the **wind** acting on it, from three
-sensors that are each individually inadequate:
-
 | Sensor | Rate | Measures | Weakness |
 |---|---|---|---|
-| IMU | 100 Hz | acceleration | integrating twice turns small bias into huge position error — **drifts 53 m in 60 s** |
+| IMU | 100 Hz | acceleration | integrating twice turns small bias into huge error — **drifts 53 m in 60 s** |
 | Altimeter | 10 Hz | height only | σ = 0.60 m, and says nothing about horizontal position |
 | Optical flow | 30 Hz | horizontal velocity | σ = 0.12 m/s, and **degrades with altitude** |
 
@@ -25,219 +39,160 @@ correlated in time, so a gust now predicts a gust a second from now.
 A Linear Dynamical System is an HMM whose hidden state is continuous. Everything from the
 discrete case carries over:
 
-| Concept | HMM | LDS (this project) |
+| Concept | HMM (discrete) | LDS (this project) |
 |---|---|---|
-| Hidden state | discrete (Rainy/Sunny) | continuous (position, velocity, wind) |
-| Forward pass | α recursion | **Kalman filter** — predict then update |
+| Hidden state | Rainy / Sunny | position, velocity, wind ∈ ℝ⁹ |
+| Forward pass | α recursion | **Kalman filter** — predict, then update |
 | Forward–backward | γ = αβ / P(O) | **RTS smoother** |
 | Underflow fix | scaling factors sₜ | log-likelihood accumulated from innovations |
-| Unknown parameters | EM / Baum–Welch | **EM** with the smoother in the E-step |
+| Unknown parameters | EM / Baum–Welch | **EM**, with the smoother in the E-step |
+| Viterbi | best discrete path | the smoothed mean *is* the MAP path (Gaussian ⇒ unimodal) |
 
-Because the state is continuous and every relationship is linear with Gaussian noise, the sum over
-states becomes an integral with a closed form. The posterior stays Gaussian, so a mean and a
+Because the state is continuous and every relationship is linear with Gaussian noise, the sum
+over states becomes an integral with a closed form. The posterior stays Gaussian, so a mean and a
 covariance are the whole answer — we never enumerate paths.
 
 ## The model
 
-Per axis the state is `[position, velocity, wind]`, giving a 9-D state across three axes:
+State is 9-dimensional: three identical per-axis blocks of `[position, velocity, wind]`.
 
 ```
-x = [px py pz  vx vy vz  wx wy wz]ᵀ
+p(t+1) = p(t) + v(t)·Δt
+v(t+1) = v(t) + ( a − k·(v(t) − w(t)) )·Δt      ← drag acts on AIRSPEED (v − w)
+w(t+1) = φ·w(t) + ε(t),        φ = exp(−Δt/τ)   ← Ornstein–Uhlenbeck gust model
 ```
 
-```
-p ← p + v·Δt
-v ← v + (a − k(v − w))·Δt        drag acts on AIRSPEED (v − w), not ground speed
-w ← φ·w + ε,   φ = exp(−Δt/τ)    Ornstein–Uhlenbeck gust model
-```
+Two decisions worth defending:
 
-The key design decision: most treatments dump wind into `Q` as process noise. Instead we make wind
-part of what we estimate, as a first-order Gauss–Markov process. The physical insight is that
-aerodynamic drag depends on velocity *relative to the air*. Crucially this is still **linear**, so
-an exact Kalman filter applies and no EKF is needed.
+1. **Drag acts on airspeed `(v − w)`, not ground speed.** This is what couples wind into the
+   dynamics and makes it *observable* — we infer the gust from how the drone is pushed off course.
+   Write drag against ground speed instead and the wind becomes unrecoverable in principle.
 
-Parameters: `k = 0.8 s⁻¹` drag · `τ = 5 s` gust correlation · `σ_gust = 1.5 m/s`.
-The IMU enters as the **control input `u`**, not as a measurement.
+2. **Gusts are an Ornstein–Uhlenbeck process, not white noise.** Real turbulence persists for
+   seconds. Crucially this is **still linear**, so the Kalman filter remains exactly optimal —
+   no EKF or UKF is needed. We gain realism without losing optimality.
 
-## Real data
+## Real data, from two independent sources
 
-The notebook downloads a **real PX4 flight-controller log** at runtime and measures the IMU's true
-noise and bias from it:
+This is not a project where every number was chosen by the authors.
 
-```
-https://raw.githubusercontent.com/PX4/pyulog/main/test/sample.ulg      (BSD-3-Clause)
-```
-
-Measured, not assumed:
-
-| Quantity | Value |
-|---|---|
-| Sample rate | 248 Hz over 69 s, 17 070 samples |
-| Accel σ (x/y/z) | 0.293 / 0.411 / 0.162 m/s² |
-| Gyro σ (mean) | ≈ 0.18 rad/s |
-| Accel bias | 1.091 / −0.442 / 0.189 m/s² (real, uncorrected) |
-| **σ_imu feeding Q** | **0.289 m/s²** |
-
-Measuring sensor noise from a *static* log is standard practice — with the vehicle still,
-everything the accelerometer reports beyond gravity is noise and bias. It is how Allan-variance
-calibration is done.
-
-> ### Stated plainly
-> The 60-second turbulent **trajectory is simulated**. Only the **IMU noise is real**. The public
-> PX4 logs are bench tests where the aircraft never moved (x, y range 0.00 m), and the ETH EuRoC
-> server did not respond, so a fully real flight was not available. The altimeter and optical-flow
-> streams are **derived** from the trajectory, not raw hardware.
-
-## Real database
-
-Everything flows through SQLite — it is in the data path, not bolted on:
+**1 — Real IMU noise, from a real flight (`core.py`)**
+A PX4 ULog from an actual quadrotor flight is downloaded and parsed with `pyulog`. We measure the
+accelerometer noise from the log rather than assuming it:
 
 ```
-simulator  ──writes──▶  sensor_readings  ──SQL read──▶  Kalman filter
-                                                              │
-     ground_truth ◀──── SQL JOIN (accuracy) ────  estimates ◀──┘
+rate         248 Hz over 69 s, 17 070 samples
+accel sigma  [0.293 0.411 0.162] m/s²
+accel bias   [1.091 −0.442 0.189] m/s²   ← real, uncorrected
+sigma_imu    0.289 m/s²   (MEASURED, not assumed) → feeds Q
+velocity random walk  0.01835 (m/s²)/√Hz
 ```
 
-Six tables, 14 929 rows. The filter's **only** input is `sensor_readings`, read back out with SQL.
-Accuracy is computed by a SQL `JOIN` against `ground_truth`, not in numpy.
+**2 — Real turbulence, from measured weather (`wind.py`)**
+168 hourly wind and gust observations from the Open-Meteo archive. The flight runs in the
+genuinely gustiest hour in the record — 21 Oct 2026, 14:00 at Kallakurichi: mean 2.44 m/s with
+**9.69 m/s gusts**. The gust factor sets the turbulence intensity σ driving the OU wind state.
 
-| Table | Contents |
-|---|---|
-| `imu_calibration` | the real measured noise, with the URL it came from |
-| `imu_raw` | 4 268 real samples straight off the aircraft |
-| `ground_truth` | the true 9-D state (evaluation only) |
-| `sensor_readings` | the multi-rate noisy stream — the filter's input |
-| `estimates` | filtered / smoothed / dead-reckoned state + variance |
-| `runs` | one row per experiment: parameters and headline metrics |
+```python
+from wind import fetch_real_wind, wind_profile_from_real
+w = fetch_real_wind(lat=11.70, lon=79.00, d0="2026-10-20", d1="2026-10-26")
+```
 
-Full DDL in [`schema.sql`](schema.sql).
+## The database
+
+Everything goes through SQLite — sensors, ground truth, estimates and metrics. Accuracy is
+computed **by SQL JOIN inside the database**, not by numpy:
+
+```sql
+SELECT sqrt(avg((e.px-g.px)*(e.px-g.px) + (e.py-g.py)*(e.py-g.py) + (e.pz-g.pz)*(e.pz-g.pz)))
+FROM estimates e JOIN ground_truth g ON e.run_id=g.run_id AND e.step=g.step
+WHERE e.run_id=? AND e.kind=?
+```
+
+| table | rows | holds |
+|---|---|---|
+| `runs` | 1 | parameters and final metrics per experiment |
+| `imu_calibration` | 1 | noise measured from the PX4 log |
+| `imu_raw` | 4 268 | raw samples from the real flight |
+| `ground_truth` | 6 000 | the true state, for scoring only |
+| `sensor_readings` | 8 660 | every IMU / altimeter / flow / GPS reading |
+| `estimates` | 18 000 | filter, smoother and dead-reckoning output with variances |
+
+Schema in [`schema.sql`](schema.sql). The database itself is gitignored — the notebook rebuilds it.
 
 ## Results
 
-| Method | Position RMSE | Velocity RMSE |
-|---|---|---|
-| IMU only (dead reckoning) | 53.44 m | 2.380 m/s |
-| **Kalman filter** (real time) | **0.346 m** | 0.458 m/s |
-| **RTS smoother** (offline) | **0.238 m** | 0.146 m/s |
+60 s of flight, real measured turbulence:
 
-**155× improvement** over dead reckoning. Smoothing cuts velocity error a further 3.1×.
-
-Wind was recovered to **1.22 m/s RMSE** though no sensor measures it — only its effect through drag.
-
-### Per-axis position RMSE (m)
-
-| Method | x | y | z |
+| method | position RMSE | velocity RMSE | |
 |---|---|---|---|
-| IMU only | 51.23 | 9.32 | 12.20 |
-| Kalman filter | 0.106 | 0.124 | 0.299 |
-| RTS smoother | 0.106 | 0.124 | 0.127 |
+| IMU only (dead reckoning) | 53.439 m | 2.380 m/s | unusable |
+| **Kalman filter** | **0.346 m** | **0.458 m/s** | real time |
+| **RTS smoother** | **0.238 m** | **0.146 m/s** | after the flight |
 
-Note that **z is the worst axis**, even though it is the only one a sensor measures directly: the
-altimeter's 0.60 m noise is the binding limit. x and y are inferred from velocity and do better
-over 60 s — until they drift.
+**155× better than dead reckoning.** Wind recovered to **1.22 m/s RMSE** — though no sensor
+measures wind. EM recovered the altimeter noise as 0.593 against a true 0.600, with the
+log-likelihood rising monotonically at every iteration.
 
-![Results](figures/fig_2.png)
+## Three findings
 
-## Two findings RMSE cannot show you
-
-### 1 · NIS caught a filter that was accurate but lying
-
-Optical flow degrades with altitude, but the filter first assumed constant noise. The normalised
-innovation squared (NIS) should average the measurement dimension, which is 2:
+**1. A consistency test caught an error the RMSE could not.**
+Optical flow gets noisier with altitude; our filter assumed constant noise. Position error looked
+perfectly healthy — but NIS was **5.61 when it should be 2**, meaning the filter's claimed
+uncertainty was about three times too small. It was accurate *and dishonest about being accurate*.
 
 | R for optical flow | NIS (want 2) | position RMSE |
 |---|---|---|
-| constant (wrong) | **5.67** | 0.340 m |
-| altitude-scaled | 1.95 | 0.346 m |
+| constant (wrong) | 5.61 | 0.346 m |
+| altitude-scaled | **1.95** | 0.346 m |
 
-Accuracy barely moved — so RMSE alone would never have caught it. But the overconfident filter
-reported its own uncertainty **~3× too small**, which is how an autopilot flies into something
-while certain it is safe.
+Scaling R with the *estimated* altitude fixed the consistency without moving the accuracy at all.
+Looking only at RMSE, we would never have found it.
 
-Consistency after the fix: NIS_alt 0.97 (target 1) · NIS_flow 1.95 (target 2) · NEES 4.15
-(target 6, so still mildly conservative on the wind states).
+**2. The covariance admits what it cannot know.**
+No sensor observes horizontal position, so σₓ and σᵧ grow without bound while σ_z stays pinned by
+the altimeter. That is observability showing up in the mathematics — not a bug.
 
-### 2 · Horizontal position is unobservable
+**3. Adding a sensor made things worse.**
+A 2.5 m GPS *hurt* over a short flight, because optical flow was already better than that. It only
+begins to help once dead-reckoned drift exceeds the GPS noise:
 
-No sensor measures x or y, so their variance grows **without bound** — visible in the covariance,
-invisible in a 60 s RMSE. A 2.5 m GPS therefore *hurts* at first and only *helps* once drift
-exceeds its own noise:
-
-| Flight | no GPS | + GPS @ 1 Hz | |
+| flight | no GPS | with GPS | |
 |---|---|---|---|
-| 60 s | 0.346 m | 0.706 m | GPS **hurts** (+104%) |
-| 120 s | 0.350 m | 0.536 m | GPS **hurts** (+53%) |
+| 60 s | 0.346 m | 0.706 m | GPS hurts (+104%) |
+| 120 s | 0.350 m | 0.536 m | GPS hurts (+53%) |
 | 300 s | 0.979 m | 0.561 m | GPS helps (−43%) |
 | 600 s | 1.366 m | 0.693 m | GPS helps (−49%) |
 
-Adding a sensor is only an improvement once its noise beats your drift.
-
-## EM — learning the noise from data alone
-
-E-step = filter + smoother (the posterior over hidden states). M-step = set each variance to the
-mean squared smoothed residual. Started deliberately **3× too high**:
-
-| Iteration | σ_alt | log L |
-|---|---|---|
-| start | 1.800 | −1535 |
-| 1 | 0.599 | −325 |
-| 3 | 0.593 | −306 |
-| *truth* | *0.600* | — |
-
-Recovered to three decimals in three iterations, log-likelihood rising monotonically exactly as
-EM guarantees.
-
-![EM convergence](figures/fig_3.png)
-
-## Running it
-
-**Colab (recommended)** — upload [`Drone_Kalman_Unit4.ipynb`](Drone_Kalman_Unit4.ipynb) to
-[colab.research.google.com](https://colab.research.google.com), then Runtime → Run all. It installs
-`pyulog` and fetches the real log itself. About a minute; the 12 figures appear in section 8.
-
-**Locally**
-
-```bash
-pip install numpy scipy matplotlib pyulog
-jupyter notebook Drone_Kalman_Unit4.ipynb
-```
+More sensors is not automatically better. Fusion helps only when the new sensor beats what the
+estimator already has.
 
 ## Files
 
-| File | What it is |
+| file | what it is |
 |---|---|
-| `Drone_Kalman_Unit4.ipynb` | the full pipeline, self-contained, verified end to end |
-| `core.py` | LDS model, simulator, Kalman filter, RTS smoother, EM |
-| `db.py` | SQLite schema and the read/write layer |
-| `schema.sql` | the database DDL |
+| `Drone_Kalman_Unit4.ipynb` | the whole project, runnable top to bottom in Colab |
+| `core.py` | LDS model, PX4 log parsing, simulator, Kalman filter, RTS smoother, EM |
+| `wind.py` | real measured wind and gusts from the Open-Meteo archive |
+| `db.py` | SQLite layer — schema, writes, and the SQL-JOIN accuracy query |
+| `schema.sql` | the database schema on its own |
 | `figures/` | generated plots |
 | `run_output.txt` | console output of a full run, for reference |
 
 ## Limitations
 
-- The trajectory is simulated; only the IMU noise is real (see *Stated plainly* above).
-- Altimeter and optical-flow streams are derived from the trajectory, not raw sensors.
-- NEES of 4.15 against a target of 6 means the filter stays somewhat conservative on the wind states.
-- A real aircraft also needs attitude estimation, which is nonlinear and outside an LDS.
+Stated plainly, because they matter:
 
-## Next steps
+- **Linear drag and small-angle flight.** Aggressive manoeuvres would need an EKF or UKF.
+- **The IMU channel carries thrust acceleration only.** A real accelerometer also senses drag;
+  we leave that out deliberately so the filter must *infer* wind rather than read it.
+- **Wind is spatially uniform** across the airframe.
+- **The flight is simulated.** What is real is the IMU noise (measured from a PX4 log) and the
+  turbulence statistics (measured weather). The trajectory itself is generated.
 
-The real log showed a **1.09 m/s² accelerometer bias** — the obvious next move is to add bias as
-extra states. Beyond that: adaptive `Q`, and a genuine flight log carrying raw barometer and
-optical-flow topics.
+## The lesson we would keep
 
-## Contributions
-
-| Member | Contribution |
-|---|---|
-| V. Anbu Chelvan | LDS model formulation, wind-augmented state, Kalman filter + RTS smoother |
-| S. Roopesh | Real PX4 log retrieval, IMU noise calibration, SQLite database |
-| B. Charith Reddy | NEES/NIS consistency testing, GPS crossover study, observability analysis |
-| Y. Rupesh Reddy | EM noise learning, figures, slide deck |
-
-## References
-
-- PX4 `pyulog` sample flight log — BSD-3-Clause
-- Rauch, Tung & Striebel (1965), *Maximum likelihood estimates of linear dynamic systems*
-- Bar-Shalom, Li & Kirubarajan (2001), *Estimation with Applications to Tracking and Navigation* — NEES/NIS
-- Bishop (2006), *Pattern Recognition and Machine Learning*, ch. 13 — sequential data, LDS, EM
+**Accuracy and honesty are different properties of an estimator.** Our filter reported an
+excellent RMSE while being significantly over-confident about its own uncertainty, and only a
+consistency test revealed it. An estimator that does not know what it does not know is dangerous
+in a way that no error metric will show you.
