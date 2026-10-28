@@ -1,0 +1,30 @@
+<section id="realdata" data-section="Real wind, a real database, and what the numbers showed." data-transition="push" style="background:#FBFBF8;color:#14213D;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:26px;font-weight:600;color:#2563EB;letter-spacing:3px;text-transform:uppercase">Not invented numbers</p>
+<h2 style="font-family:'Source Serif 4', Georgia, serif;font-size:72px;font-weight:400;line-height:1.1">Real wind, and a real database</h2>
+</div>
+<div style="display:flex;gap:32px">
+<div style="flex:1;background:#FFFFFF;padding:40px;border:1px solid #E3E6E4;border-radius:16px;display:flex;flex-direction:column;gap:14px">
+<h3 style="font-size:38px;font-weight:600;color:#B45309">Two measured sources</h3>
+<p style="font-size:29px;line-height:1.45;color:#4A5568"><b>IMU noise from a real PX4 flight log</b> (σ = 0.289 m/s², real uncorrected bias), and <b>168 hourly wind observations</b> from the Open-Meteo archive.</p>
+<p style="font-size:29px;line-height:1.5;color:#14213D">We fly in the <b>gustiest real hour</b>: 21 Oct, 14:00 — mean 2.44 m/s, gusts <b style="color:#B45309">9.69 m/s</b>, from 33°. The gust factor sets turbulence σ = 2.90 m/s. <b>Neither noise is a number we chose.</b></p>
+</div>
+<div style="flex:1;background:#FFFFFF;padding:40px;border:1px solid #E3E6E4;border-radius:16px;display:flex;flex-direction:column;gap:14px">
+<h3 style="font-size:38px;font-weight:600;color:#2563EB">SQLite store</h3>
+<p style="font-size:29px;line-height:1.45;color:#4A5568">Every reading, estimate and metric is written to a real database and queried back for the results — not held in memory.</p>
+<table style="font-family:'IBM Plex Sans', Arial, sans-serif;font-size:27px;color:#14213D;padding:10px">
+<tr style="background:#F2F3F0"><th style="width:55%;text-align:left;font-weight:600;font-size:26px">table</th><th style="width:45%;text-align:right;font-weight:600;font-size:26px">rows</th></tr>
+<tr><td>sensor_readings</td><td style="text-align:right">8 660</td></tr>
+<tr><td>imu_raw (real log)</td><td style="text-align:right">4 268</td></tr>
+<tr><td>ground_truth</td><td style="text-align:right">6 000</td></tr>
+<tr><td>estimates</td><td style="text-align:right">18 000</td></tr>
+<tr><td>metrics</td><td style="text-align:right">3</td></tr>
+</table>
+</div>
+</div>
+<div style="background:#14213D;padding:36px 44px;border-radius:16px">
+<p style="font-size:32px;line-height:1.45;color:#FBFBF8">Runs are reproducible and comparable: the schema records the wind hour, gust, turbulence σ and direction alongside every estimate, so any result can be traced back to the exact conditions that produced it.</p>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#6A7179">The trajectory is simulated; the IMU noise and the turbulence driving it are both real measurements.</p>
+<aside>We wanted to avoid the usual weakness of a simulation project, which is that every number is chosen by the author. So the turbulence is driven by real measured weather. We pull 168 hours of actual wind and gust observations from the Open-Meteo archive, find the gustiest hour in the week, and use the gap between the mean wind and the gust to set the turbulence intensity. That hour had nearly ten metre per second gusts, which is genuinely rough flying. Second, everything goes into a real SQLite database with a proper schema — eighteen thousand estimate rows — and the results table on the next slide is produced by a SQL query, not by printing variables. The schema stores the wind conditions with the run, so results are reproducible and traceable. We are honest that the flight itself is simulated; what is real is the weather driving it.</aside>
+</section>

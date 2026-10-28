@@ -1,0 +1,25 @@
+<section id="kalman" data-transition="fade" style="background:#FBFBF8;color:#14213D;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:26px;font-weight:600;color:#2563EB;letter-spacing:3px;text-transform:uppercase">Forward algorithm, continuous form</p>
+<h2 style="font-family:'Source Serif 4', Georgia, serif;font-size:72px;font-weight:400;line-height:1.1">The Kalman filter</h2>
+</div>
+<div style="display:flex;gap:36px">
+<div style="flex:1;background:#FFFFFF;padding:40px;border:1px solid #E3E6E4;border-radius:16px;display:flex;flex-direction:column;gap:16px">
+<h3 style="font-size:38px;font-weight:600;color:#B45309">Predict</h3>
+<p style="font-size:28px;color:#4A5568;line-height:1.4">Run the physics forward. Uncertainty always grows.</p>
+<p style="font-family:'Source Serif 4', Georgia, serif;font-size:36px;line-height:1.7">x⁻ = A x + B u<br>P⁻ = A P Aᵀ + Q</p>
+<p style="font-size:26px;color:#6A7179;line-height:1.4">The analogue of summing over the previous hidden state.</p>
+</div>
+<div style="flex:1;background:#FFFFFF;padding:40px;border:1px solid #E3E6E4;border-radius:16px;display:flex;flex-direction:column;gap:16px">
+<h3 style="font-size:38px;font-weight:600;color:#2563EB">Update</h3>
+<p style="font-size:28px;color:#4A5568;line-height:1.4">Fold in whichever sensor just fired. Uncertainty shrinks.</p>
+<p style="font-family:'Source Serif 4', Georgia, serif;font-size:36px;line-height:1.7">y = z − H x⁻<br>S = H P⁻ Hᵀ + R<br>K = P⁻ Hᵀ S⁻¹</p>
+<p style="font-size:26px;color:#6A7179;line-height:1.4">Bayes, exactly as in the HMM emission step.</p>
+</div>
+</div>
+<div style="background:#14213D;padding:40px 48px;border-radius:16px;display:flex;flex-direction:column;gap:10px">
+<p style="font-size:33px;line-height:1.45;color:#FBFBF8">Sensors arrive at <b>different rates</b> — so we predict every step and update only when a measurement exists. The gain <b style="color:#F0B46A">K</b> decides how far to trust each reading, and it converges to a steady value on its own.</p>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#6A7179">Running log-likelihood from S is the continuous counterpart of Unit 4’s scaling factors.</p>
+<aside>The filter alternates two steps. Predict pushes the state forward through the dynamics and always inflates the covariance by Q, because the physics is uncertain. Update takes whichever sensor just reported, forms the innovation y — the surprise, how far the measurement is from what we expected — and corrects the state in proportion to the Kalman gain K. Note how naturally this handles multi-rate sensors: we predict every single step at 100 Hz, and we only update when a measurement actually exists. No interpolation, no resampling. And the log-likelihood we accumulate from the innovation covariance S is doing the same job as the scaling factors in the HMM forward pass: keeping the numbers numerically stable while giving us the probability of the whole observation sequence.</aside>
+</section>

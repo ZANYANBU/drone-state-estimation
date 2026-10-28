@@ -1,5 +1,5 @@
 # Console output of a full run (Drone_Kalman_Unit4.ipynb).
-# Kept for reference so the numbers in README.md can be checked.
+# Both the IMU noise and the gust intensity are measured, not assumed.
 
 ready
 downloaded 4.05 MB
@@ -9,6 +9,9 @@ downloaded 4.05 MB
   accel bias      [ 1.091 -0.442  0.189] m/s^2   <- real, uncorrected
   sigma_imu -> Q  0.289 m/s^2   (MEASURED, not assumed)
   velocity random walk 0.01835 (m/s^2)/sqrt(Hz)
+168 real hourly observations near Kallakurichi
+gustiest hour 2026-10-21T14:00: mean 2.44 m/s, gust 9.69 m/s, from 33 deg
+-> SIGMA_GUST = 2.90 m/s  (MEASURED, not assumed)
 rows per table:
   runs                    1
   imu_calibration         1
@@ -19,56 +22,56 @@ rows per table:
 
 sensor mix, straight from SQL:
   imu              6000   mean sigma None
-  optical_flow     2000   mean sigma 0.2037
+  optical_flow     2000   mean sigma 0.2707
   altimeter         600   mean sigma 0.6
   gps                60   mean sigma 2.5
 accuracy, computed by SQL JOIN against ground_truth:
 
   method                      pos RMSE (m)  vel RMSE (m/s)
-  dead_reckon                       53.439           2.380
-  filter                             0.346           0.458
-  smoother                           0.238           0.146
+  dead_reckon                      103.394           4.601
+  filter                             0.434           0.683
+  smoother                           0.318           0.200
 
-  improvement: 155x
+  improvement: 238x
 FINDING 1 — NIS catches a model mismatch that RMSE hides
 
   R for optical flow        NIS (want 2)    pos RMSE
-  constant (wrong)                  5.61       0.346
-  altitude-scaled                   1.95       0.346
+  constant (wrong)                 10.15       0.434
+  altitude-scaled                   1.95       0.434
 
   Accuracy barely moves - but the wrong filter reported uncertainty ~3x too small.
 
-  NEES 4.15 (want 6)   NIS_alt 0.97 (want 1)   NIS_flow 1.95 (want 2)
-  wind RMSE 1.224 m/s  <- never measured by any sensor
-   EM  0:  loglik=     -1535.2   sigma_alt=0.687 (true 0.600)   sigma_flow=0.215 (true 0.120)
-   EM  1:  loglik=      -325.1   sigma_alt=0.599 (true 0.600)   sigma_flow=0.206 (true 0.120)
-   EM  2:  loglik=      -306.4   sigma_alt=0.594 (true 0.600)   sigma_flow=0.205 (true 0.120)
-   EM  3:  loglik=      -306.3   sigma_alt=0.593 (true 0.600)   sigma_flow=0.205 (true 0.120)
-   EM  4:  loglik=      -306.3   sigma_alt=0.593 (true 0.600)   sigma_flow=0.205 (true 0.120)
-   EM  5:  loglik=      -306.3   sigma_alt=0.593 (true 0.600)   sigma_flow=0.205 (true 0.120)
-   EM  6:  loglik=      -306.3   sigma_alt=0.593 (true 0.600)   sigma_flow=0.205 (true 0.120)
-   EM  7:  loglik=      -306.3   sigma_alt=0.593 (true 0.600)   sigma_flow=0.205 (true 0.120)
+  NEES 4.09 (want 6)   NIS_alt 0.98 (want 1)   NIS_flow 1.95 (want 2)
+  wind RMSE 2.142 m/s  <- never measured by any sensor
+   EM  0:  loglik=     -2220.0   sigma_alt=0.711 (true 0.600)   sigma_flow=0.286 (true 0.120)
+   EM  1:  loglik=     -1666.9   sigma_alt=0.603 (true 0.600)   sigma_flow=0.281 (true 0.120)
+   EM  2:  loglik=     -1649.4   sigma_alt=0.594 (true 0.600)   sigma_flow=0.281 (true 0.120)
+   EM  3:  loglik=     -1649.2   sigma_alt=0.593 (true 0.600)   sigma_flow=0.281 (true 0.120)
+   EM  4:  loglik=     -1649.2   sigma_alt=0.593 (true 0.600)   sigma_flow=0.281 (true 0.120)
+   EM  5:  loglik=     -1649.2   sigma_alt=0.593 (true 0.600)   sigma_flow=0.281 (true 0.120)
+   EM  6:  loglik=     -1649.2   sigma_alt=0.593 (true 0.600)   sigma_flow=0.281 (true 0.120)
+   EM  7:  loglik=     -1649.2   sigma_alt=0.593 (true 0.600)   sigma_flow=0.281 (true 0.120)
 
   recovered sigma_alt = 0.593  (true 0.600)
-  log-likelihood -1535.2 -> -306.3, monotonic: True
+  log-likelihood -2220.0 -> -1649.2, monotonic: True
   flight        no GPS   with GPS   verdict
-    60 s       0.346 m     0.706 m   GPS HURTS (+104%)
-   120 s       0.350 m     0.536 m   GPS HURTS (+53%)
-   300 s       0.979 m     0.561 m   GPS helps  (-43%)
-   600 s       1.366 m     0.693 m   GPS helps  (-49%)
+    60 s       0.434 m     0.750 m   GPS HURTS (+73%)
+   120 s       0.430 m     0.604 m   GPS HURTS (+41%)
+   300 s       1.558 m     0.673 m   GPS helps  (-57%)
+   600 s       2.105 m     0.901 m   GPS helps  (-57%)
 runs table:
   run_id         1
-  created        2026-10-28 09:34:47
-  pos_rmse_dr    53.4393
-  pos_rmse_kf    0.3455
-  pos_rmse_rts   0.2377
-  vel_rmse_kf    0.4576
-  wind_rmse_kf   1.2238
-  loglik         -74.3342
-  nees           4.1482
-  nis_alt        0.9748
-  nis_flow       1.9511
+  created        2026-10-28 09:46:50
+  pos_rmse_dr    103.3942
+  pos_rmse_kf    0.4337
+  pos_rmse_rts   0.3179
+  vel_rmse_kf    0.6825
+  wind_rmse_kf   2.1421
+  loglik         -1149.9587
+  nees           4.0883
+  nis_alt        0.9783
+  nis_flow       1.947
   notes          IMU noise measured from a real PX4 log
 
   drone.db       5052 KB
-  drone_db.sql   8096 KB  (portable dump)
+  drone_db.sql   8077 KB  (portable dump)

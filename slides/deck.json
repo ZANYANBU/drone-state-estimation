@@ -1,0 +1,35 @@
+{
+ "v": 4,
+ "createdOnFiles": { "v": 1, "at": "2026-10-28T06:00:00Z" },
+ "lists": "css",
+ "title": "Drone State Estimation — LDS + Kalman (Unit 4)",
+ "cover": "cover",
+ "order": [
+  "cover",
+  "problem",
+  "bridge",
+  "model",
+  "kalman",
+  "smoother",
+  "realdata",
+  "results",
+  "findings",
+  "conclusion"
+ ],
+ "sections": {
+  "intro": { "description": "The estimation problem and why it belongs to Unit 4.", "start": "cover" },
+  "theory": { "description": "LDS as a continuous HMM: filter, smoother and EM.", "start": "bridge" },
+  "experiment": { "description": "Real wind, a real database, and what the numbers showed.", "start": "realdata" }
+ },
+ "faces": {
+  "source-serif-4": {
+   "family": "Source Serif 4",
+   "href": "https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@300..700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
+  },
+  "ibm-plex-sans": {
+   "family": "IBM Plex Sans",
+   "href": "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
+  }
+ },
+ "designSystems": []
+}

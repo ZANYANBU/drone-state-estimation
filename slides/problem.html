@@ -1,0 +1,25 @@
+<section id="problem" data-transition="fade" style="background:#FBFBF8;color:#14213D;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:48px">
+<h2 style="font-family:'Source Serif 4', Georgia, serif;font-size:72px;font-weight:400;line-height:1.1">Three sensors, none of them enough</h2>
+<div style="display:flex;gap:32px">
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;background:#FFFFFF;padding:40px;border:1px solid #E3E6E4;border-radius:16px">
+<p style="font-size:24px;font-weight:600;color:#B45309;letter-spacing:2px;text-transform:uppercase">100 Hz</p>
+<h3 style="font-size:38px;font-weight:600">IMU</h3>
+<p style="font-size:30px;line-height:1.45;color:#4A5568">Gives acceleration. Integrate it twice and small errors compound into metres within seconds.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;background:#FFFFFF;padding:40px;border:1px solid #E3E6E4;border-radius:16px">
+<p style="font-size:24px;font-weight:600;color:#B45309;letter-spacing:2px;text-transform:uppercase">10 Hz</p>
+<h3 style="font-size:38px;font-weight:600">Altimeter</h3>
+<p style="font-size:30px;line-height:1.45;color:#4A5568">Height only, ±0.6 m of noise. Says nothing about where the drone is horizontally.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;background:#FFFFFF;padding:40px;border:1px solid #E3E6E4;border-radius:16px">
+<p style="font-size:24px;font-weight:600;color:#B45309;letter-spacing:2px;text-transform:uppercase">30 Hz</p>
+<h3 style="font-size:38px;font-weight:600">Optical flow</h3>
+<p style="font-size:30px;line-height:1.45;color:#4A5568">Horizontal velocity, and it gets worse the higher you fly — fewer ground features to track.</p>
+</div>
+</div>
+<div style="background:#14213D;padding:44px 48px;border-radius:16px;display:flex;flex-direction:column;gap:12px">
+<p style="font-size:34px;line-height:1.45;color:#FBFBF8"><b>And the wind is invisible.</b> No sensor measures it, yet it is the single biggest thing pushing the drone off course — in our data it moved the aircraft about <b style="color:#F0B46A">200 metres downwind in 60 seconds</b>.</p>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#6A7179">The estimator has to recover what no instrument reports.</p>
+<aside>Each sensor is individually inadequate. The IMU drifts because double integration compounds error. The altimeter only sees height. Optical flow only sees horizontal velocity, and it degrades with altitude — remember that detail, it comes back later as a bug we caught. Above all, the wind is never measured by anything, and it is the dominant disturbance. Our job is to fuse these three partial, noisy, differently-timed signals into one consistent estimate, and to recover the wind as a bonus.</aside>
+</section>

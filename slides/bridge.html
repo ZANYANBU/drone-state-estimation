@@ -1,0 +1,23 @@
+<section id="bridge" data-section="LDS as a continuous HMM: filter, smoother and EM." data-transition="push" style="background:#FBFBF8;color:#14213D;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:26px;font-weight:600;color:#2563EB;letter-spacing:3px;text-transform:uppercase">The central idea</p>
+<h2 style="font-family:'Source Serif 4', Georgia, serif;font-size:72px;font-weight:400;line-height:1.1">A Linear Dynamical System is a continuous HMM</h2>
+</div>
+<p style="font-size:34px;line-height:1.45;color:#4A5568;width:1500px">Every algorithm from this unit transfers. Only the state changes — from a finite set of symbols to a vector of real numbers — and sums over states become integrals that stay Gaussian.</p>
+<table style="font-family:'IBM Plex Sans', Arial, sans-serif;font-size:30px;color:#14213D;border:1px solid #E3E6E4;border-radius:12px;padding:16px">
+<tr style="background:#14213D">
+<th style="width:34%;color:#FBFBF8;font-size:28px;text-align:left;font-weight:600">Unit 4 — discrete HMM</th>
+<th style="width:34%;color:#FBFBF8;font-size:28px;text-align:left;font-weight:600">Here — continuous LDS</th>
+<th style="width:32%;color:#FBFBF8;font-size:28px;text-align:left;font-weight:600">In our drone</th>
+</tr>
+<tr><td>Hidden states q<sub>t</sub></td><td>State vector x<sub>t</sub> ∈ ℝ⁹</td><td style="color:#4A5568">position, velocity, wind</td></tr>
+<tr style="background:#F2F3F0"><td>Transition matrix A</td><td>State matrix A, noise Q</td><td style="color:#4A5568">flight dynamics + gusts</td></tr>
+<tr><td>Emission matrix B</td><td>Observation C, noise R</td><td style="color:#4A5568">what each sensor sees</td></tr>
+<tr style="background:#F2F3F0"><td>Forward algorithm α<sub>t</sub></td><td><b>Kalman filter</b></td><td style="color:#4A5568">estimate in real time</td></tr>
+<tr><td>Forward–backward γ<sub>t</sub></td><td><b>RTS smoother</b></td><td style="color:#4A5568">best estimate after landing</td></tr>
+<tr style="background:#F2F3F0"><td>Scaling factors s<sub>t</sub></td><td>Log-likelihood from S</td><td style="color:#4A5568">keeps numbers stable</td></tr>
+<tr><td>EM / Baum–Welch</td><td><b>EM for Q and R</b></td><td style="color:#4A5568">learn unknown noise</td></tr>
+</table>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#6A7179">Viterbi has an analogue too: for a linear-Gaussian model the most likely path equals the smoothed mean.</p>
+<aside>This is the slide that ties the project to the syllabus, so spend time here. The point is that we are not doing something separate from HMMs — we are doing the same thing with a continuous state space. The forward algorithm becomes the Kalman filter. Forward-backward becomes the RTS smoother. Baum-Welch becomes EM for the noise covariances. Even the scaling factors have a counterpart: in the HMM we normalise alpha to stop underflow, and here we accumulate log-likelihood through the innovation covariance for the same reason. And Viterbi: because everything is Gaussian and therefore unimodal, the most likely single path is just the sequence of smoothed means, so Viterbi and forward-backward give the same answer here, which is not true for a discrete HMM.</aside>
+</section>

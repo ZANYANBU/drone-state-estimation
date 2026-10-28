@@ -7,8 +7,8 @@
 > Recover a drone's true position, velocity **and the wind acting on it** from three sensors that
 > are each individually inadequate — and from a wind that nothing on board measures.
 >
-> **Result: 155× more accurate than integrating the IMU.** Position error falls from 53.4 m to
-> 0.35 m, and the wind is recovered to 1.22 m/s without ever being observed.
+> **Result: 238× more accurate than integrating the IMU.** Position error falls from 103.4 m to
+> 0.43 m, and the wind is recovered to 2.14 m/s without ever being observed.
 
 ---
 
@@ -27,7 +27,7 @@ No API key, no account, nothing to configure.
 
 | Sensor | Rate | Measures | Weakness |
 |---|---|---|---|
-| IMU | 100 Hz | acceleration | integrating twice turns small bias into huge error — **drifts 53 m in 60 s** |
+| IMU | 100 Hz | acceleration | integrating twice turns small bias into huge error — **drifts 103 m in 60 s** |
 | Altimeter | 10 Hz | height only | σ = 0.60 m, and says nothing about horizontal position |
 | Optical flow | 30 Hz | horizontal velocity | σ = 0.12 m/s, and **degrades with altitude** |
 
@@ -91,7 +91,8 @@ velocity random walk  0.01835 (m/s²)/√Hz
 **2 — Real turbulence, from measured weather (`wind.py`)**
 168 hourly wind and gust observations from the Open-Meteo archive. The flight runs in the
 genuinely gustiest hour in the record — 21 Oct 2026, 14:00 at Kallakurichi: mean 2.44 m/s with
-**9.69 m/s gusts**. The gust factor sets the turbulence intensity σ driving the OU wind state.
+**9.69 m/s gusts**. The gust factor sets the turbulence intensity σ = 2.90 m/s driving the OU wind state — so
+**neither the sensor noise nor the wind is a number we chose.**
 
 ```python
 from wind import fetch_real_wind, wind_profile_from_real
@@ -126,11 +127,11 @@ Schema in [`schema.sql`](schema.sql). The database itself is gitignored — the 
 
 | method | position RMSE | velocity RMSE | |
 |---|---|---|---|
-| IMU only (dead reckoning) | 53.439 m | 2.380 m/s | unusable |
-| **Kalman filter** | **0.346 m** | **0.458 m/s** | real time |
-| **RTS smoother** | **0.238 m** | **0.146 m/s** | after the flight |
+| IMU only (dead reckoning) | 103.394 m | 4.601 m/s | unusable |
+| **Kalman filter** | **0.434 m** | **0.683 m/s** | real time |
+| **RTS smoother** | **0.318 m** | **0.200 m/s** | after the flight |
 
-**155× better than dead reckoning.** Wind recovered to **1.22 m/s RMSE** — though no sensor
+**238× better than dead reckoning.** Wind recovered to **2.14 m/s RMSE** — though no sensor
 measures wind. EM recovered the altimeter noise as 0.593 against a true 0.600, with the
 log-likelihood rising monotonically at every iteration.
 
@@ -138,13 +139,13 @@ log-likelihood rising monotonically at every iteration.
 
 **1. A consistency test caught an error the RMSE could not.**
 Optical flow gets noisier with altitude; our filter assumed constant noise. Position error looked
-perfectly healthy — but NIS was **5.61 when it should be 2**, meaning the filter's claimed
-uncertainty was about three times too small. It was accurate *and dishonest about being accurate*.
+perfectly healthy — but NIS was **10.15 when it should be 2**, meaning the filter's claimed
+uncertainty was about five times too small. It was accurate *and dishonest about being accurate*.
 
 | R for optical flow | NIS (want 2) | position RMSE |
 |---|---|---|
-| constant (wrong) | 5.61 | 0.346 m |
-| altitude-scaled | **1.95** | 0.346 m |
+| constant (wrong) | 10.15 | 0.434 m |
+| altitude-scaled | **1.95** | 0.434 m |
 
 Scaling R with the *estimated* altitude fixed the consistency without moving the accuracy at all.
 Looking only at RMSE, we would never have found it.
@@ -159,10 +160,10 @@ begins to help once dead-reckoned drift exceeds the GPS noise:
 
 | flight | no GPS | with GPS | |
 |---|---|---|---|
-| 60 s | 0.346 m | 0.706 m | GPS hurts (+104%) |
-| 120 s | 0.350 m | 0.536 m | GPS hurts (+53%) |
-| 300 s | 0.979 m | 0.561 m | GPS helps (−43%) |
-| 600 s | 1.366 m | 0.693 m | GPS helps (−49%) |
+| 60 s | 0.434 m | 0.750 m | GPS hurts (+73%) |
+| 120 s | 0.430 m | 0.604 m | GPS hurts (+41%) |
+| 300 s | 1.558 m | 0.673 m | GPS helps (−57%) |
+| 600 s | 2.105 m | 0.901 m | GPS helps (−57%) |
 
 More sensors is not automatically better. Fusion helps only when the new sensor beats what the
 estimator already has.
@@ -196,3 +197,19 @@ Stated plainly, because they matter:
 excellent RMSE while being significantly over-confident about its own uncertainty, and only a
 consistency test revealed it. An estimator that does not know what it does not know is dangerous
 in a way that no error metric will show you.
+
+## Contributions
+
+| Member | Contribution |
+|---|---|
+| V. Anbu Chelvan | LDS model formulation, wind-augmented state, Kalman filter + RTS smoother |
+| S. Roopesh | Real PX4 log retrieval, IMU noise calibration, SQLite database |
+| B. Charith Reddy | NEES/NIS consistency testing, GPS crossover study, observability analysis |
+| Y. Rupesh Reddy | EM noise learning, figures, slide deck |
+
+## References
+
+- Bishop, *Pattern Recognition and Machine Learning*, ch. 13 — sequential data, HMMs and LDS.
+- Rauch, Tung & Striebel (1965), "Maximum likelihood estimates of linear dynamic systems".
+- Bar-Shalom, Li & Kirubarajan, *Estimation with Applications to Tracking and Navigation* — NEES and NIS.
+- PX4 flight log, [logs.px4.io](https://logs.px4.io). Weather: [Open-Meteo archive](https://open-meteo.com).

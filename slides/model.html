@@ -1,0 +1,29 @@
+<section id="model" data-transition="fade" style="background:#FBFBF8;color:#14213D;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<h2 style="font-family:'Source Serif 4', Georgia, serif;font-size:72px;font-weight:400;line-height:1.1">The model: make the wind part of the state</h2>
+<div style="display:flex;gap:40px">
+<div style="flex:1;display:flex;flex-direction:column;gap:24px">
+<div style="background:#14213D;padding:36px 40px;border-radius:16px">
+<p style="font-size:28px;color:#7FA7F5;letter-spacing:2px;text-transform:uppercase;font-weight:600">State, 9 dimensions</p>
+<p style="font-family:'Source Serif 4', Georgia, serif;font-size:38px;color:#FBFBF8;line-height:1.5">x = [ p<sub>x</sub> p<sub>y</sub> p<sub>z</sub> , v<sub>x</sub> v<sub>y</sub> v<sub>z</sub> , w<sub>x</sub> w<sub>y</sub> w<sub>z</sub> ]</p>
+</div>
+<div style="background:#FFFFFF;padding:36px 40px;border:1px solid #E3E6E4;border-radius:16px;display:flex;flex-direction:column;gap:10px">
+<p style="font-size:26px;font-weight:600;color:#B45309;letter-spacing:2px;text-transform:uppercase">Per axis</p>
+<p style="font-family:'Source Serif 4', Georgia, serif;font-size:34px;line-height:1.6">p<sub>t+1</sub> = p<sub>t</sub> + v<sub>t</sub> Δt</p>
+<p style="font-family:'Source Serif 4', Georgia, serif;font-size:34px;line-height:1.6">v<sub>t+1</sub> = v<sub>t</sub> + ( a − k(v<sub>t</sub> − w<sub>t</sub>) ) Δt</p>
+<p style="font-family:'Source Serif 4', Georgia, serif;font-size:34px;line-height:1.6">w<sub>t+1</sub> = φ w<sub>t</sub> + ε<sub>t</sub></p>
+</div>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:24px">
+<div style="background:#FFFFFF;padding:32px 36px;border:1px solid #E3E6E4;border-radius:16px;display:flex;flex-direction:column;gap:10px">
+<h3 style="font-size:34px;font-weight:600;color:#2563EB">Drag acts on airspeed, not ground speed</h3>
+<p style="font-size:29px;line-height:1.45;color:#4A5568">The term is (v − w). That is what couples wind into the dynamics and makes it <b>observable</b> — we infer the gust from how the drone is pushed off course.</p>
+</div>
+<div style="background:#FFFFFF;padding:32px 36px;border:1px solid #E3E6E4;border-radius:16px;display:flex;flex-direction:column;gap:10px">
+<h3 style="font-size:34px;font-weight:600;color:#2563EB">Gusts are correlated, not white noise</h3>
+<p style="font-size:29px;line-height:1.45;color:#4A5568">Wind is an Ornstein–Uhlenbeck process with φ = e<sup>−Δt/τ</sup>. Real gusts persist for seconds. Crucially this stays <b>linear</b>, so the Kalman filter remains exact — no EKF needed.</p>
+</div>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#6A7179">Assumption: the IMU channel carries thrust acceleration; aerodynamic disturbance is left out of it, so the filter must infer wind rather than read it.</p>
+<aside>Two design decisions are worth defending in the viva. First, drag depends on airspeed, the velocity relative to the air, which is v minus w. If we had written drag as acting on ground speed, the wind would never enter the dynamics and would be completely unobservable. Writing it correctly is exactly what lets us estimate the wind. Second, we model wind as an Ornstein-Uhlenbeck process rather than white noise, because real gusts are correlated over seconds. Students often reach for an extended Kalman filter at this point, but note that the OU process is still linear, so the ordinary Kalman filter remains exactly optimal. We gain realism without losing optimality.</aside>
+</section>

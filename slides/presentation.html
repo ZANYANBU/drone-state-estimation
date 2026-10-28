@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Drone State Estimation — LDS + Kalman (Unit 4)</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@300..700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+  body { margin:0; background:#2a2f3a; font-family:'IBM Plex Sans',Arial,sans-serif; }
+  .slide-wrap { position:relative; width:1920px; height:1080px; margin:28px auto;
+                 box-shadow:0 10px 40px rgba(0,0,0,.45); overflow:hidden;
+                 transform-origin:top center; }
+  .slide-wrap > section { position:absolute; inset:0; box-sizing:border-box; }
+  .num { position:absolute; right:18px; top:14px; z-index:9; font-size:20px;
+          color:#8a93a6; font-variant-numeric:tabular-nums; }
+  h1,h2,h3,p,ul,ol,table { margin:0; }
+  table { border-collapse:collapse; width:100%; }
+  th,td { padding:.35em .6em; border-bottom:1px solid rgba(0,0,0,.12); }
+  @media (max-width:1960px) { .slide-wrap { transform:scale(calc((100vw - 40px)/1920));
+      margin-bottom:calc(28px - 1080px + 1080px * ((100vw - 40px)/1920)); } }
+  @media print { body{background:#fff} .slide-wrap{margin:0;box-shadow:none;page-break-after:always;transform:none} }
+  .notes { max-width:1100px; margin:60px auto; color:#cfd4de; font-size:15px; line-height:1.6; }
+  .notes h2 { color:#fff; font-size:22px; margin:0 0 18px; }
+  .notes li { margin-bottom:14px; }
+</style></head><body>
+<div class="slide-wrap"><div class="num">1 / 10</div>
+<section id="cover" data-section="The estimation problem and why it belongs to Unit 4." data-transition="fade" style="background:#14213D;color:#FBFBF8;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;justify-content:space-between">
+<p style="font-family:'IBM Plex Sans', Arial, sans-serif;font-size:28px;font-weight:600;color:#7FA7F5;letter-spacing:3px;text-transform:uppercase">Machine Learning · Unit 4 · Sequential Data</p>
+<div style="display:flex;flex-direction:column;gap:36px">
+<h1 style="font-family:'Source Serif 4', Georgia, serif;font-size:116px;font-weight:400;line-height:1.05;color:#FBFBF8">Estimating a drone’s position<br>and velocity in turbulent wind</h1>
+<p style="font-size:40px;line-height:1.4;color:#BFD8D5;width:1400px">Linear Dynamical Systems and Kalman filtering, applied to three noisy sensors that disagree — and a wind nobody measures.</p>
+</div>
+<div style="display:flex;justify-content:space-between;align-items:flex-end">
+<div style="display:flex;flex-direction:column;gap:14px">
+<p style="font-size:26px;color:#7FA7F5;letter-spacing:2px;text-transform:uppercase;font-weight:600">Team Cash Guard</p>
+<p style="font-size:34px;color:#FBFBF8;line-height:1.5">V. Anbu Chelvan&nbsp; · &nbsp;S. Roopesh&nbsp; · &nbsp;B. Charith Reddy&nbsp; · &nbsp;Y. Rupesh Reddy</p>
+</div>
+<p style="font-size:30px;color:#BFD8D5;text-align:right;line-height:1.4"><b style="color:#FBFBF8">238×</b> better than<br>integrating the IMU</p>
+</div>
+
+</section>
+
+</div>
+<div class="slide-wrap"><div class="num">2 / 10</div>
+<section id="problem" data-transition="fade" style="background:#FBFBF8;color:#14213D;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:48px">
+<h2 style="font-family:'Source Serif 4', Georgia, serif;font-size:72px;font-weight:400;line-height:1.1">Three sensors, none of them enough</h2>
+<div style="display:flex;gap:32px">
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;background:#FFFFFF;padding:40px;border:1px solid #E3E6E4;border-radius:16px">
+<p style="font-size:24px;font-weight:600;color:#B45309;letter-spacing:2px;text-transform:uppercase">100 Hz</p>
+<h3 style="font-size:38px;font-weight:600">IMU</h3>
+<p style="font-size:30px;line-height:1.45;color:#4A5568">Gives acceleration. Integrate it twice and small errors compound into metres within seconds.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;background:#FFFFFF;padding:40px;border:1px solid #E3E6E4;border-radius:16px">
+<p style="font-size:24px;font-weight:600;color:#B45309;letter-spacing:2px;text-transform:uppercase">10 Hz</p>
+<h3 style="font-size:38px;font-weight:600">Altimeter</h3>
+<p style="font-size:30px;line-height:1.45;color:#4A5568">Height only, ±0.6 m of noise. Says nothing about where the drone is horizontally.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;background:#FFFFFF;padding:40px;border:1px solid #E3E6E4;border-radius:16px">
+<p style="font-size:24px;font-weight:600;color:#B45309;letter-spacing:2px;text-transform:uppercase">30 Hz</p>
+<h3 style="font-size:38px;font-weight:600">Optical flow</h3>
+<p style="font-size:30px;line-height:1.45;color:#4A5568">Horizontal velocity, and it gets worse the higher you fly — fewer ground features to track.</p>
+</div>
+</div>
+<div style="background:#14213D;padding:44px 48px;border-radius:16px;display:flex;flex-direction:column;gap:12px">
+<p style="font-size:34px;line-height:1.45;color:#FBFBF8"><b>And the wind is invisible.</b> No sensor measures it, yet it is the single biggest thing pushing the drone off course — in our data it moved the aircraft about <b style="color:#F0B46A">200 metres downwind in 60 seconds</b>.</p>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#6A7179">The estimator has to recover what no instrument reports.</p>
+
+</section>
+
+</div>
+<div class="slide-wrap"><div class="num">3 / 10</div>
+<section id="bridge" data-section="LDS as a continuous HMM: filter, smoother and EM." data-transition="push" style="background:#FBFBF8;color:#14213D;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:26px;font-weight:600;color:#2563EB;letter-spacing:3px;text-transform:uppercase">The central idea</p>
+<h2 style="font-family:'Source Serif 4', Georgia, serif;font-size:72px;font-weight:400;line-height:1.1">A Linear Dynamical System is a continuous HMM</h2>
+</div>
+<p style="font-size:34px;line-height:1.45;color:#4A5568;width:1500px">Every algorithm from this unit transfers. Only the state changes — from a finite set of symbols to a vector of real numbers — and sums over states become integrals that stay Gaussian.</p>
+<table style="font-family:'IBM Plex Sans', Arial, sans-serif;font-size:30px;color:#14213D;border:1px solid #E3E6E4;border-radius:12px;padding:16px">
+<tr style="background:#14213D">
+<th style="width:34%;color:#FBFBF8;font-size:28px;text-align:left;font-weight:600">Unit 4 — discrete HMM</th>
+<th style="width:34%;color:#FBFBF8;font-size:28px;text-align:left;font-weight:600">Here — continuous LDS</th>
+<th style="width:32%;color:#FBFBF8;font-size:28px;text-align:left;font-weight:600">In our drone</th>
+</tr>
+<tr><td>Hidden states q<sub>t</sub></td><td>State vector x<sub>t</sub> ∈ ℝ⁹</td><td style="color:#4A5568">position, velocity, wind</td></tr>
+<tr style="background:#F2F3F0"><td>Transition matrix A</td><td>State matrix A, noise Q</td><td style="color:#4A5568">flight dynamics + gusts</td></tr>
+<tr><td>Emission matrix B</td><td>Observation C, noise R</td><td style="color:#4A5568">what each sensor sees</td></tr>
+<tr style="background:#F2F3F0"><td>Forward algorithm α<sub>t</sub></td><td><b>Kalman filter</b></td><td style="color:#4A5568">estimate in real time</td></tr>
+<tr><td>Forward–backward γ<sub>t</sub></td><td><b>RTS smoother</b></td><td style="color:#4A5568">best estimate after landing</td></tr>
+<tr style="background:#F2F3F0"><td>Scaling factors s<sub>t</sub></td><td>Log-likelihood from S</td><td style="color:#4A5568">keeps numbers stable</td></tr>
+<tr><td>EM / Baum–Welch</td><td><b>EM for Q and R</b></td><td style="color:#4A5568">learn unknown noise</td></tr>
+</table>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#6A7179">Viterbi has an analogue too: for a linear-Gaussian model the most likely path equals the smoothed mean.</p>
+
+</section>
+
+</div>
+<div class="slide-wrap"><div class="num">4 / 10</div>
+<section id="model" data-transition="fade" style="background:#FBFBF8;color:#14213D;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<h2 style="font-family:'Source Serif 4', Georgia, serif;font-size:72px;font-weight:400;line-height:1.1">The model: make the wind part of the state</h2>
+<div style="display:flex;gap:40px">
+<div style="flex:1;display:flex;flex-direction:column;gap:24px">
+<div style="background:#14213D;padding:36px 40px;border-radius:16px">
+<p style="font-size:28px;color:#7FA7F5;letter-spacing:2px;text-transform:uppercase;font-weight:600">State, 9 dimensions</p>
+<p style="font-family:'Source Serif 4', Georgia, serif;font-size:38px;color:#FBFBF8;line-height:1.5">x = [ p<sub>x</sub> p<sub>y</sub> p<sub>z</sub> , v<sub>x</sub> v<sub>y</sub> v<sub>z</sub> , w<sub>x</sub> w<sub>y</sub> w<sub>z</sub> ]</p>
+</div>
+<div style="background:#FFFFFF;padding:36px 40px;border:1px solid #E3E6E4;border-radius:16px;display:flex;flex-direction:column;gap:10px">
+<p style="font-size:26px;font-weight:600;color:#B45309;letter-spacing:2px;text-transform:uppercase">Per axis</p>
+<p style="font-family:'Source Serif 4', Georgia, serif;font-size:34px;line-height:1.6">p<sub>t+1</sub> = p<sub>t</sub> + v<sub>t</sub> Δt</p>
+<p style="font-family:'Source Serif 4', Georgia, serif;font-size:34px;line-height:1.6">v<sub>t+1</sub> = v<sub>t</sub> + ( a − k(v<sub>t</sub> − w<sub>t</sub>) ) Δt</p>
+<p style="font-family:'Source Serif 4', Georgia, serif;font-size:34px;line-height:1.6">w<sub>t+1</sub> = φ w<sub>t</sub> + ε<sub>t</sub></p>
+</div>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:24px">
+<div style="background:#FFFFFF;padding:32px 36px;border:1px solid #E3E6E4;border-radius:16px;display:flex;flex-direction:column;gap:10px">
+<h3 style="font-size:34px;font-weight:600;color:#2563EB">Drag acts on airspeed, not ground speed</h3>
+<p style="font-size:29px;line-height:1.45;color:#4A5568">The term is (v − w). That is what couples wind into the dynamics and makes it <b>observable</b> — we infer the gust from how the drone is pushed off course.</p>
+</div>
+<div style="background:#FFFFFF;padding:32px 36px;border:1px solid #E3E6E4;border-radius:16px;display:flex;flex-direction:column;gap:10px">
+<h3 style="font-size:34px;font-weight:600;color:#2563EB">Gusts are correlated, not white noise</h3>
+<p style="font-size:29px;line-height:1.45;color:#4A5568">Wind is an Ornstein–Uhlenbeck process with φ = e<sup>−Δt/τ</sup>. Real gusts persist for seconds. Crucially this stays <b>linear</b>, so the Kalman filter remains exact — no EKF needed.</p>
+</div>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#6A7179">Assumption: the IMU channel carries thrust acceleration; aerodynamic disturbance is left out of it, so the filter must infer wind rather than read it.</p>
+
+</section>
+
+</div>
+<div class="slide-wrap"><div class="num">5 / 10</div>
+<section id="kalman" data-transition="fade" style="background:#FBFBF8;color:#14213D;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:26px;font-weight:600;color:#2563EB;letter-spacing:3px;text-transform:uppercase">Forward algorithm, continuous form</p>
+<h2 style="font-family:'Source Serif 4', Georgia, serif;font-size:72px;font-weight:400;line-height:1.1">The Kalman filter</h2>
+</div>
+<div style="display:flex;gap:36px">
+<div style="flex:1;background:#FFFFFF;padding:40px;border:1px solid #E3E6E4;border-radius:16px;display:flex;flex-direction:column;gap:16px">
+<h3 style="font-size:38px;font-weight:600;color:#B45309">Predict</h3>
+<p style="font-size:28px;color:#4A5568;line-height:1.4">Run the physics forward. Uncertainty always grows.</p>
+<p style="font-family:'Source Serif 4', Georgia, serif;font-size:36px;line-height:1.7">x⁻ = A x + B u<br>P⁻ = A P Aᵀ + Q</p>
+<p style="font-size:26px;color:#6A7179;line-height:1.4">The analogue of summing over the previous hidden state.</p>
+</div>
+<div style="flex:1;background:#FFFFFF;padding:40px;border:1px solid #E3E6E4;border-radius:16px;display:flex;flex-direction:column;gap:16px">
+<h3 style="font-size:38px;font-weight:600;color:#2563EB">Update</h3>
+<p style="font-size:28px;color:#4A5568;line-height:1.4">Fold in whichever sensor just fired. Uncertainty shrinks.</p>
+<p style="font-family:'Source Serif 4', Georgia, serif;font-size:36px;line-height:1.7">y = z − H x⁻<br>S = H P⁻ Hᵀ + R<br>K = P⁻ Hᵀ S⁻¹</p>
+<p style="font-size:26px;color:#6A7179;line-height:1.4">Bayes, exactly as in the HMM emission step.</p>
+</div>
+</div>
+<div style="background:#14213D;padding:40px 48px;border-radius:16px;display:flex;flex-direction:column;gap:10px">
+<p style="font-size:33px;line-height:1.45;color:#FBFBF8">Sensors arrive at <b>different rates</b> — so we predict every step and update only when a measurement exists. The gain <b style="color:#F0B46A">K</b> decides how far to trust each reading, and it converges to a steady value on its own.</p>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#6A7179">Running log-likelihood from S is the continuous counterpart of Unit 4’s scaling factors.</p>
+
+</section>
+
+</div>
+<div class="slide-wrap"><div class="num">6 / 10</div>
+<section id="smoother" data-transition="fade" style="background:#F2F3F0;color:#14213D;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<h2 style="font-family:'Source Serif 4', Georgia, serif;font-size:72px;font-weight:400;line-height:1.1">Smoothing and learning the noise</h2>
+<div style="display:flex;gap:36px">
+<div style="flex:1;display:flex;flex-direction:column;gap:18px">
+<div style="background:#FFFFFF;padding:36px 40px;border:1px solid #E3E6E4;border-radius:16px;display:flex;flex-direction:column;gap:12px">
+<p style="font-size:26px;font-weight:600;color:#2563EB;letter-spacing:2px;text-transform:uppercase">Backward pass = β</p>
+<h3 style="font-size:40px;font-weight:600">RTS smoother</h3>
+<p style="font-size:29px;line-height:1.45;color:#4A5568">The filter at time t knows only the past. After landing we know the <b>whole flight</b>, so we sweep backwards and let later evidence correct earlier estimates — exactly γ<sub>t</sub> ∝ α<sub>t</sub> β<sub>t</sub>.</p>
+<p style="font-size:30px;line-height:1.45;color:#14213D;background:#F2F3F0;padding:20px 24px;border-radius:10px">Velocity error fell from <b>0.683</b> to <b style="color:#2563EB">0.200 m/s</b> — a 3.4× gain for one extra pass.</p>
+</div>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:18px">
+<div style="background:#FFFFFF;padding:36px 40px;border:1px solid #E3E6E4;border-radius:16px;display:flex;flex-direction:column;gap:12px">
+<p style="font-size:26px;font-weight:600;color:#B45309;letter-spacing:2px;text-transform:uppercase">Baum–Welch, continuous</p>
+<h3 style="font-size:40px;font-weight:600">EM for unknown noise</h3>
+<p style="font-size:29px;line-height:1.45;color:#4A5568"><b>E-step:</b> filter + smoother give the posterior over hidden states.<br><b>M-step:</b> each variance becomes the mean squared smoothed residual.</p>
+<p style="font-size:30px;line-height:1.45;color:#14213D;background:#F2F3F0;padding:20px 24px;border-radius:10px">Started <b>3× wrong</b>. EM recovered σ<sub>alt</sub> = <b style="color:#B45309">0.593</b> against a true 0.600, log-likelihood rising every step.</p>
+</div>
+</div>
+</div>
+<img src="figures/deck_em.png" alt="Left: EM log-likelihood rising monotonically over eight iterations. Right: real measured wind speed and gusts over seven days, with the gustiest hour marked." style="width:1664px;height:268px;object-fit:contain;border-radius:12px;background:#FFFFFF">
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#6A7179">We never told the filter how noisy the sensors were — it worked it out from the data.</p>
+
+</section>
+
+</div>
+<div class="slide-wrap"><div class="num">7 / 10</div>
+<section id="realdata" data-section="Real wind, a real database, and what the numbers showed." data-transition="push" style="background:#FBFBF8;color:#14213D;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:26px;font-weight:600;color:#2563EB;letter-spacing:3px;text-transform:uppercase">Not invented numbers</p>
+<h2 style="font-family:'Source Serif 4', Georgia, serif;font-size:72px;font-weight:400;line-height:1.1">Real wind, and a real database</h2>
+</div>
+<div style="display:flex;gap:32px">
+<div style="flex:1;background:#FFFFFF;padding:40px;border:1px solid #E3E6E4;border-radius:16px;display:flex;flex-direction:column;gap:14px">
+<h3 style="font-size:38px;font-weight:600;color:#B45309">Two measured sources</h3>
+<p style="font-size:29px;line-height:1.45;color:#4A5568"><b>IMU noise from a real PX4 flight log</b> (σ = 0.289 m/s², real uncorrected bias), and <b>168 hourly wind observations</b> from the Open-Meteo archive.</p>
+<p style="font-size:29px;line-height:1.5;color:#14213D">We fly in the <b>gustiest real hour</b>: 21 Oct, 14:00 — mean 2.44 m/s, gusts <b style="color:#B45309">9.69 m/s</b>, from 33°. The gust factor sets turbulence σ = 2.90 m/s. <b>Neither noise is a number we chose.</b></p>
+</div>
+<div style="flex:1;background:#FFFFFF;padding:40px;border:1px solid #E3E6E4;border-radius:16px;display:flex;flex-direction:column;gap:14px">
+<h3 style="font-size:38px;font-weight:600;color:#2563EB">SQLite store</h3>
+<p style="font-size:29px;line-height:1.45;color:#4A5568">Every reading, estimate and metric is written to a real database and queried back for the results — not held in memory.</p>
+<table style="font-family:'IBM Plex Sans', Arial, sans-serif;font-size:27px;color:#14213D;padding:10px">
+<tr style="background:#F2F3F0"><th style="width:55%;text-align:left;font-weight:600;font-size:26px">table</th><th style="width:45%;text-align:right;font-weight:600;font-size:26px">rows</th></tr>
+<tr><td>sensor_readings</td><td style="text-align:right">8 660</td></tr>
+<tr><td>imu_raw (real log)</td><td style="text-align:right">4 268</td></tr>
+<tr><td>ground_truth</td><td style="text-align:right">6 000</td></tr>
+<tr><td>estimates</td><td style="text-align:right">18 000</td></tr>
+<tr><td>metrics</td><td style="text-align:right">3</td></tr>
+</table>
+</div>
+</div>
+<div style="background:#14213D;padding:36px 44px;border-radius:16px">
+<p style="font-size:32px;line-height:1.45;color:#FBFBF8">Runs are reproducible and comparable: the schema records the wind hour, gust, turbulence σ and direction alongside every estimate, so any result can be traced back to the exact conditions that produced it.</p>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#6A7179">The trajectory is simulated; the IMU noise and the turbulence driving it are both real measurements.</p>
+
+</section>
+
+</div>
+<div class="slide-wrap"><div class="num">8 / 10</div>
+<section id="results" data-transition="fade" style="background:#FBFBF8;color:#14213D;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:34px">
+<h2 style="font-family:'Source Serif 4', Georgia, serif;font-size:72px;font-weight:400;line-height:1.1">Results — 60 seconds in 9.7 m/s gusts</h2>
+<div style="display:flex;gap:32px">
+<img src="figures/deck_traj.png" alt="3D flight path. The true path and the Kalman estimate lie on top of each other across a 200 metre arc; the IMU-only path stays near the origin." style="width:816px;height:420px;object-fit:contain;border-radius:12px;background:#FFFFFF;border:1px solid #E3E6E4">
+<img src="figures/deck_rmse.png" alt="Bar chart on a log scale comparing position and velocity RMSE for IMU only, Kalman filter and RTS smoother." style="width:816px;height:420px;object-fit:contain;border-radius:12px;background:#FFFFFF;border:1px solid #E3E6E4">
+</div>
+<table style="font-family:'IBM Plex Sans', Arial, sans-serif;font-size:31px;color:#14213D;border:1px solid #E3E6E4;border-radius:12px;padding:16px">
+<tr style="background:#14213D">
+<th style="width:34%;color:#FBFBF8;text-align:left;font-size:29px;font-weight:600">method</th>
+<th style="width:22%;color:#FBFBF8;text-align:right;font-size:29px;font-weight:600">position RMSE</th>
+<th style="width:22%;color:#FBFBF8;text-align:right;font-size:29px;font-weight:600">velocity RMSE</th>
+<th style="width:22%;color:#FBFBF8;text-align:left;font-size:29px;font-weight:600">verdict</th>
+</tr>
+<tr><td>IMU only (dead reckoning)</td><td style="text-align:right">103.394 m</td><td style="text-align:right">4.601 m/s</td><td style="color:#B45309">unusable</td></tr>
+<tr style="background:#F2F3F0"><td><b>Kalman filter</b></td><td style="text-align:right"><b>0.434 m</b></td><td style="text-align:right"><b>0.683 m/s</b></td><td style="color:#2563EB">real time</td></tr>
+<tr><td><b>RTS smoother</b></td><td style="text-align:right"><b>0.318 m</b></td><td style="text-align:right"><b>0.200 m/s</b></td><td style="color:#2563EB">after the flight</td></tr>
+</table>
+<div style="display:flex;gap:32px">
+<div style="flex:1;background:#14213D;padding:30px 36px;border-radius:14px"><p style="font-size:32px;color:#FBFBF8;line-height:1.4"><b style="color:#F0B46A;font-size:40px">238×</b>&nbsp; better than integrating the IMU</p></div>
+<div style="flex:1;background:#14213D;padding:30px 36px;border-radius:14px"><p style="font-size:32px;color:#FBFBF8;line-height:1.4"><b style="color:#F0B46A;font-size:40px">2.14 m/s</b>&nbsp; wind RMSE — never measured</p></div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#6A7179">Table produced by a SQL query against the metrics table, not by printing variables.</p>
+
+</section>
+
+</div>
+<div class="slide-wrap"><div class="num">9 / 10</div>
+<section id="findings" data-transition="fade" style="background:#F2F3F0;color:#14213D;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:32px">
+<div style="display:flex;flex-direction:column;gap:10px">
+<p style="font-size:26px;font-weight:600;color:#2563EB;letter-spacing:3px;text-transform:uppercase">What the experiments taught us</p>
+<h2 style="font-family:'Source Serif 4', Georgia, serif;font-size:66px;font-weight:400;line-height:1.1">Three findings we did not expect</h2>
+</div>
+<div style="display:flex;gap:28px">
+<div style="flex:1;background:#FFFFFF;padding:34px;border:1px solid #E3E6E4;border-radius:16px;display:flex;flex-direction:column;gap:12px">
+<p style="font-size:30px;font-weight:700;color:#B45309">1</p>
+<h3 style="font-size:33px;font-weight:600;line-height:1.25">A consistency test caught a bug the error could not</h3>
+<p style="font-size:26px;line-height:1.45;color:#4A5568">Optical flow gets noisier with altitude; our filter assumed constant noise. Position error looked fine at 0.42 m — but <b>NIS was 10.15 when it should be 2</b>. The filter was accurate and still wrong about its own confidence.</p>
+<p style="font-size:26px;line-height:1.4;color:#14213D;background:#F2F3F0;padding:16px 18px;border-radius:10px">Scaling R with estimated altitude → NIS <b style="color:#2563EB">1.95</b>, RMSE unchanged.</p>
+</div>
+<div style="flex:1;background:#FFFFFF;padding:34px;border:1px solid #E3E6E4;border-radius:16px;display:flex;flex-direction:column;gap:12px">
+<p style="font-size:30px;font-weight:700;color:#B45309">2</p>
+<h3 style="font-size:33px;font-weight:600;line-height:1.25">The covariance admits what it cannot know</h3>
+<p style="font-size:26px;line-height:1.45;color:#4A5568">No sensor observes horizontal position, so σ<sub>x</sub> and σ<sub>y</sub> grow without bound while σ<sub>z</sub> stays pinned by the altimeter.</p>
+<p style="font-size:26px;line-height:1.4;color:#14213D;background:#F2F3F0;padding:16px 18px;border-radius:10px">That is <b>observability</b> visible in the mathematics — not a bug.</p>
+</div>
+<div style="flex:1;background:#FFFFFF;padding:34px;border:1px solid #E3E6E4;border-radius:16px;display:flex;flex-direction:column;gap:12px">
+<p style="font-size:30px;font-weight:700;color:#B45309">3</p>
+<h3 style="font-size:33px;font-weight:600;line-height:1.25">Adding a sensor made it worse</h3>
+<p style="font-size:26px;line-height:1.45;color:#4A5568">A 2.5 m GPS <b>hurt</b> over 60 s (0.434 → 0.750 m): optical flow was already better than GPS. It only starts helping past ~300 s, once drift exceeds GPS noise.</p>
+<p style="font-size:26px;line-height:1.4;color:#14213D;background:#F2F3F0;padding:16px 18px;border-radius:10px">More sensors is <b>not</b> automatically better.</p>
+</div>
+</div>
+<img src="figures/deck_unc.png" alt="Position uncertainty over time: x and y grow steadily without bound while z stays flat and small, held down by the altimeter." style="width:1664px;height:226px;object-fit:contain;border-radius:12px;background:#FFFFFF;border:1px solid #E3E6E4">
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#6A7179">A filter can be accurate and still be dishonest about how accurate it is.</p>
+
+</section>
+
+</div>
+<div class="slide-wrap"><div class="num">10 / 10</div>
+<section id="conclusion" data-transition="fade" style="background:#14213D;color:#FBFBF8;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<h2 style="font-family:'Source Serif 4', Georgia, serif;font-size:72px;font-weight:400;line-height:1.1;color:#FBFBF8">Conclusions</h2>
+<div style="display:flex;gap:32px">
+<div style="flex:1;display:flex;flex-direction:column;gap:18px">
+<p style="font-size:26px;font-weight:600;color:#7FA7F5;letter-spacing:2px;text-transform:uppercase">What we showed</p>
+<ul style="font-size:31px;line-height:1.55;color:#FBFBF8;padding:0 0 0 36px">
+<li>An LDS is a continuous HMM — filter, smoother and EM all carried over from Unit 4 unchanged in spirit.</li>
+<li>Modelling wind as a correlated hidden state keeps the system <b>linear</b>, so the Kalman filter stays exactly optimal.</li>
+<li>Fusing three partial, multi-rate sensors beat dead reckoning by <b style="color:#F0B46A">238×</b>.</li>
+<li>We recovered a quantity <b>no sensor measures</b> to 2.14 m/s.</li>
+</ul>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:18px">
+<p style="font-size:26px;font-weight:600;color:#F0B46A;letter-spacing:2px;text-transform:uppercase">Limitations, stated plainly</p>
+<ul style="font-size:31px;line-height:1.55;color:#BFD8D5;padding:0 0 0 36px">
+<li>Linear drag and small-angle flight; aggressive manoeuvres would need an EKF or UKF.</li>
+<li>The IMU channel carries thrust only — a real accelerometer also senses drag.</li>
+<li>Wind is treated as spatially uniform across the airframe.</li>
+<li>IMU noise and gust intensity are both measured; the trajectory itself is simulated.</li>
+</ul>
+</div>
+</div>
+<div style="background:#1C2E54;padding:36px 44px;border-radius:16px;display:flex;flex-direction:column;gap:10px">
+<p style="font-size:33px;line-height:1.45;color:#FBFBF8">The lesson we would keep: <b>accuracy and honesty are different properties.</b> A filter can report a small error and still be badly wrong about its own confidence — and only a consistency test will tell you.</p>
+</div>
+<div style="display:flex;justify-content:space-between;align-items:flex-end">
+<p style="font-size:28px;color:#BFD8D5;line-height:1.5">Next: estimate drag coefficient k online · spatially varying gust field · fly the estimator on a real log end-to-end</p>
+<p style="font-size:26px;color:#7FA7F5;text-align:right;line-height:1.5"><b style="color:#FBFBF8">Team Cash Guard</b><br>Anbu · Roopesh · Charith · Rupesh</p>
+</div>
+
+</section>
+
+</div>
+<div class="notes"><h2>Speaker notes</h2><ol>
+<li><b>cover</b> — Our problem: a drone flying in gusty wind has to know where it is and how fast it is going. It carries an IMU, an altimeter and an optical-flow camera. All three are noisy, they run at different rates, and none of them measures the wind that is pushing the drone around. We solve it with a Linear Dynamical System and a Kalman filter — which, as we will show, is the same machinery as the HMM material from this unit, moved from discrete states to continuous ones. The headline result is that the filter is 238 times more accurate than simply integrating the accelerometer.</li>
+<li><b>problem</b> — Each sensor is individually inadequate. The IMU drifts because double integration compounds error. The altimeter only sees height. Optical flow only sees horizontal velocity, and it degrades with altitude — remember that detail, it comes back later as a bug we caught. Above all, the wind is never measured by anything, and it is the dominant disturbance. Our job is to fuse these three partial, noisy, differently-timed signals into one consistent estimate, and to recover the wind as a bonus.</li>
+<li><b>bridge</b> — This is the slide that ties the project to the syllabus, so spend time here. The point is that we are not doing something separate from HMMs — we are doing the same thing with a continuous state space. The forward algorithm becomes the Kalman filter. Forward-backward becomes the RTS smoother. Baum-Welch becomes EM for the noise covariances. Even the scaling factors have a counterpart: in the HMM we normalise alpha to stop underflow, and here we accumulate log-likelihood through the innovation covariance for the same reason. And Viterbi: because everything is Gaussian and therefore unimodal, the most likely single path is just the sequence of smoothed means, so Viterbi and forward-backward give the same answer here, which is not true for a discrete HMM.</li>
+<li><b>model</b> — Two design decisions are worth defending in the viva. First, drag depends on airspeed, the velocity relative to the air, which is v minus w. If we had written drag as acting on ground speed, the wind would never enter the dynamics and would be completely unobservable. Writing it correctly is exactly what lets us estimate the wind. Second, we model wind as an Ornstein-Uhlenbeck process rather than white noise, because real gusts are correlated over seconds. Students often reach for an extended Kalman filter at this point, but note that the OU process is still linear, so the ordinary Kalman filter remains exactly optimal. We gain realism without losing optimality.</li>
+<li><b>kalman</b> — The filter alternates two steps. Predict pushes the state forward through the dynamics and always inflates the covariance by Q, because the physics is uncertain. Update takes whichever sensor just reported, forms the innovation y — the surprise, how far the measurement is from what we expected — and corrects the state in proportion to the Kalman gain K. Note how naturally this handles multi-rate sensors: we predict every single step at 100 Hz, and we only update when a measurement actually exists. No interpolation, no resampling. And the log-likelihood we accumulate from the innovation covariance S is doing the same job as the scaling factors in the HMM forward pass: keeping the numbers numerically stable while giving us the probability of the whole observation sequence.</li>
+<li><b>smoother</b> — Two more unit-4 algorithms, both delivering. The RTS smoother is the backward half of forward-backward. The filter is causal — at time t it only knows the past — but once the flight is over we know everything, so we sweep backwards and let later evidence improve earlier estimates. That is precisely gamma proportional to alpha times beta, and it cut our velocity error by a factor of three and a half. Then EM: we deliberately started the filter believing the sensors were three times noisier than they really are, and EM recovered the altimeter noise to within one per cent. The log-likelihood increased monotonically at every iteration, which is the theoretical guarantee of EM showing up in practice.</li>
+<li><b>realdata</b> — We wanted to avoid the usual weakness of a simulation project, which is that every number is chosen by the author. So the turbulence is driven by real measured weather. We pull 168 hours of actual wind and gust observations from the Open-Meteo archive, find the gustiest hour in the week, and use the gap between the mean wind and the gust to set the turbulence intensity. That hour had nearly ten metre per second gusts, which is genuinely rough flying. Second, everything goes into a real SQLite database with a proper schema — eighteen thousand estimate rows — and the results table on the next slide is produced by a SQL query, not by printing variables. The schema stores the wind conditions with the run, so results are reproducible and traceable. We are honest that the flight itself is simulated; what is real is the weather driving it.</li>
+<li><b>results</b> — Here is the payoff. On the left, the true path and the Kalman estimate are indistinguishable across a two hundred metre arc, while the IMU-only track stays near the origin — it never sees the wind, so it has no idea the drone has been blown downwind. Position error drops from 103 metres to 43 centimetres, a factor of 238. The smoother tightens that further to 32 centimetres and cuts velocity error by more than three times. The result we are proudest of is the last box: we estimate the wind to about 2.1 metres per second, even though not one sensor on the aircraft measures wind. It is recovered purely from the discrepancy between what the dynamics predicted and what the sensors reported.</li>
+<li><b>findings</b> — These three findings are what turn a textbook exercise into a real investigation. The first is the most important lesson: we validated with NEES and NIS, which check whether the filter's claimed uncertainty matches its actual error. The position error looked perfectly healthy, but NIS was five times what it should be — the filter was over-confident because we had told it the optical flow noise was constant when in reality it grows with altitude. Fixing it barely changed the RMSE but made the filter honest. If you only ever look at RMSE you would never have found this. Second, the uncertainty in x and y grows forever because nothing measures them, and the graph shows exactly that — the mathematics is telling us the truth about observability. Third, the counter-intuitive one: adding a GPS actually made things worse over a short flight, because optical flow was already more accurate than a consumer GPS. Fusion only helps when the new sensor beats what you already have.</li>
+<li><b>conclusion</b> — To close. We set out to estimate a drone's position and velocity from three inadequate sensors in turbulent wind, and we did it with the Unit 4 toolkit moved from discrete to continuous states. The headline numbers are a 238 times improvement over dead reckoning and the recovery of wind, which nothing on the aircraft measures. We are explicit about the limitations: linear drag, small angles, a simplified IMU channel, uniform wind, and a simulated trajectory driven by real measured IMU noise and real measured gusts. If we had to keep one lesson it is that accuracy and honesty are different properties of an estimator — our filter had an excellent RMSE while being significantly over-confident, and only the NIS consistency test revealed it. Thank you — happy to take questions.</li>
+</ol></div>
+</body></html>
